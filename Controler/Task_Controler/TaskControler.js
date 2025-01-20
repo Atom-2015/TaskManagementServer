@@ -148,3 +148,33 @@ module.exports.HandleAllTaskList = async (req, res) => {
     }
   };
   
+
+
+
+// Api to get the data of perticular users task
+module.exports.HandleTaskAssignedToUser = async (req, res) => {
+    const email = req.user.email;
+    console.log(`user id is ${email}`)
+    try {
+        const userid = await User.findOne({email:email});
+        if(!userid){
+            return res.status(404).json({
+                message:"No user found"
+            })
+        }
+        const task = await Task.find({assigned_to:userid._id});
+        if(!task){
+            return res.status(304).json({
+                message:"No task found"
+            })
+        }
+        return res.status(200).json({
+            success:true,
+            data:task
+        })
+    } catch (error) {
+        return res.status(402).json({
+            message:"Internal Server Error"
+        })
+    }
+}

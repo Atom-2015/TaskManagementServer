@@ -1,5 +1,7 @@
  
 const User = require('../../Modal/User');
+const jwt = require('jsonwebtoken');
+
 
 
 
@@ -50,6 +52,7 @@ module.exports.HandleAddUser = async (req, res) => {
 const privated = process.env.SECRET_KEY;
 
 module.exports.HandleSignin = async (req, res) => {
+  console.log("Api called for creating sesson")
     try {    
         console.log("This is body " ,req.body);
             

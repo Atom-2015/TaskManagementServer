@@ -11,6 +11,10 @@ const UserSchema = new mongoose.Schema({
    }, // Reference to Departments
   designation: { type: String },
   date_of_joining: { type: Date },
+  password:{
+       type:String,
+       required:true
+  },
   // manager_id: { type: String },  
   salary: { type: Number },
   role: { type: String, enum: ['Employee', 'Manager', 'Admin'],   },

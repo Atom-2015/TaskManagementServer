@@ -10,7 +10,10 @@ router.put('/updatetask' , TaskControler.HandleTaskUpdate)
 
 
 // api to get all tasks 
-router.get('/alltask' , TaskControler.HandleAllTaskList )
+router.get('/alltask' , TaskControler.HandleAllTaskList );
+
+// Api to get all the data of task assigned to preticular user
+router.get('/taskassigned' ,isAuthenticated, TaskControler.HandleTaskAssignedToUser);
 
 
 
