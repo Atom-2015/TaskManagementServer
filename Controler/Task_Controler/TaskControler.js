@@ -1,0 +1,150 @@
+const Project = require('../../Modal/Projects');
+const User = require('../../Modal/User');
+const Task = require('../../Modal/Task');
+
+
+ 
+
+module.exports.HandleTaskCreation = async (req, res) => {
+    const { title, description, assigned_to, assigned_by, due_date, priority, totalunit, unittype } = req.body;
+
+    // Validate required fields
+    if ([title, assigned_to, assigned_by, due_date, totalunit, unittype ].some(field => field == null || field === '')) {
+        return res.status(400).json({
+            message: "Please fill all the fields",
+            status: false
+        });
+    }
+
+ const project_id = req.headers['x-project-id'];
+    try {
+        // Create the task
+        const newTask = await Task.create({
+            title,
+            description,
+            project_id,
+            assigned_to,
+            assigned_by,
+            due_date,
+            priority,
+            totalunit,
+            unittype,
+             
+        });
+
+        if (!newTask) {
+            return res.status(500).json({
+                message: "Task creation failed",
+                status: false
+            });
+        }
+
+        // Add the task to the project's task list
+        const project = await Project.findById(project_id);
+        if (!project) {
+            return res.status(404).json({
+                message: "Project not found",
+                status: false
+            });
+        }
+
+        // console.log(`project is ${project}`);
+
+        project.tasks.push(newTask._id);
+        await project.save();
+
+        return res.status(201).json({
+            message: "Task created successfully",
+            status: true,
+            data: newTask
+        });
+
+    } catch (error) {
+        console.error("Error creating task:", error);
+        return res.status(500).json({
+            message: "Internal Server Error",
+            status: false
+        });
+    }
+};
+
+
+
+
+// Api to update the task status and unitj
+ module.exports.HandleTaskUpdate = async (req, res) => {
+    const { taskId, priority, completedUnit } = req.body;
+
+    // Validate required fields
+    if (!taskId || priority == null || completedUnit == null) {
+        return res.status(400).json({
+            message: "Task ID, priority, and completedUnit are required",
+            status: false,
+        });
+    }
+
+    try {
+        // Update the task
+        const updatedTask = await Task.findByIdAndUpdate(
+            taskId,
+            { priority, completedUnit },
+            { new: true } // Return the updated task
+        );
+
+        if (!updatedTask) {
+            return res.status(404).json({
+                message: "Task not found or could not be updated",
+                status: false,
+            });
+        }
+
+        // Successful update
+        return res.status(200).json({
+            message: "Task updated successfully",
+            status: true,
+            data: updatedTask,
+        });
+    } catch (error) {
+        console.error('Error updating task:', error);
+        return res.status(500).json({
+            message: "Internal Server Error",
+            status: false,
+        });
+    }
+};
+
+
+
+
+// api to get list of subtasks according to projecsts
+module.exports.HandleAllTaskList = async (req, res) => {
+    // Check if the 'x-project-id' header is present
+    // console.log("api called", req.headers['x-project-id'])
+    if (!req.headers['x-project-id']) {
+      return res.status(400).json({
+        success: false,
+        message: "Project ID is required in the 'x-project-id' header.",
+      });
+    }
+  
+    try {
+      // Extract the project ID from the header
+      const projectId = req.headers['x-project-id'];
+
+      const tasks = await Task.find({ project_id: projectId });
+  
+      // Return the tasks in the response
+      res.status(200).json({
+        success: true,
+        data: tasks,
+      });
+    } catch (error) {
+      // Handle errors and send a response
+      res.status(500).json({
+        success: false,
+        message: 'Failed to retrieve tasks',
+        error: error.message,
+      });
+    }
+  };
+  

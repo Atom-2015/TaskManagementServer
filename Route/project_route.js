@@ -1,0 +1,13 @@
+const express = require('express');
+const router = express.Router();
+const ProjectControler = require('../Controler/Project_Controler/ProjectControler');
+const isAuthenticated = require('../middleware/isAuthMiddleware');
+
+router.post('/addproject' , ProjectControler.createProject);
+
+
+// end point to get list of all projects 
+router.get('/allprojects' , ProjectControler.HandleAllProjects )
+
+
+module.exports = router; 
