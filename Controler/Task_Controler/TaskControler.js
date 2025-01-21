@@ -162,7 +162,9 @@ module.exports.HandleTaskAssignedToUser = async (req, res) => {
                 message:"No user found"
             })
         }
-        const task = await Task.find({assigned_to:userid._id});
+        // const task = await Task.find({assigned_to:userid._id});
+        const task = await Task.find({assigned_to:userid._id}).populate('project_id');
+
         if(!task){
             return res.status(304).json({
                 message:"No task found"
