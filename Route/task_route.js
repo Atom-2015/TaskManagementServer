@@ -16,6 +16,10 @@ router.get('/alltask' , TaskControler.HandleAllTaskList );
 router.get('/taskassigned' ,isAuthenticated, TaskControler.HandleTaskAssignedToUser);
 
 
+// route to see tasks assigned by me 
+router.get('/taskassignedby' ,isAuthenticated, TaskControler.HandleAllTaskAssignedByMe);
+
+
 
 
 module.exports = router; 

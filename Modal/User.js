@@ -17,7 +17,12 @@ const UserSchema = new mongoose.Schema({
   },
   // manager_id: { type: String },  
   salary: { type: Number },
-  role: { type: String, enum: ['Employee', 'Manager', 'Admin'],   },
+  status:{
+    type:String,
+    enum: ['Active', 'Inactive'],
+    default:'Active'
+  },
+  role: { type: String, enum: ['Employee', 'Manager', 'Admin'],   default:'Employee' },
   profile_image: { type: String }
 });
 

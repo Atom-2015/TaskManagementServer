@@ -180,3 +180,38 @@ module.exports.HandleTaskAssignedToUser = async (req, res) => {
         })
     }
 }
+
+
+
+// Task Asigned by me api 
+module.exports.HandleAllTaskAssignedByMe = async (req, res) => {
+    try {
+      // Find user ID by email
+      const user = await User.findOne({ email: req.user.email }).select("_id");
+      if (!user) {
+        return res.status(403).json({
+          message: "No user found",
+        });
+      }
+      // Find tasks assigned by the user
+      const tasks = await Task.find({ assigned_by: user._id });
+      if (tasks.length === 0) {
+        return res.status(404).json({
+          message: "No tasks found assigned by this user",
+        });
+      }
+      // Return tasks
+      return res.status(200).json({
+        message: "Tasks assigned by me",
+        data: tasks,
+      });
+    } catch (error) {
+      // Error handling
+      console.error("Error in HandleAllTaskAssignedByMe:", error);
+      return res.status(500).json({
+        message: "Internal Server Error",
+        error: error.message,
+      });
+    }
+  };
+  
