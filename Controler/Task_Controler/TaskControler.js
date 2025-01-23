@@ -73,10 +73,10 @@ module.exports.HandleTaskCreation = async (req, res) => {
 
 // Api to update the task status and unitj
  module.exports.HandleTaskUpdate = async (req, res) => {
-    const { taskId, priority, completedUnit } = req.body;
+    const { taskId, completedUnit } = req.body;
 
     // Validate required fields
-    if (!taskId || priority == null || completedUnit == null) {
+    if (!taskId || completedUnit == null) {
         return res.status(400).json({
             message: "Task ID, priority, and completedUnit are required",
             status: false,

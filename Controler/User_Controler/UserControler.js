@@ -107,4 +107,45 @@ module.exports.HandleAllUserlist = async (req, res) => {
       });
     }
   };
+
+
+
+
+
+// api to update/edit user
+module.exports.HandleEditUser = async (req, res) => {
+  console.log('api called')
+  const { userId } = req.params; // Assuming you pass the user ID as a parameter
+  const { name, email, password, role, status } = req.body; // Fields to update
+
+  // Validate that at least one field is provided
+  if (!name && !email && !password && !role && !status) {
+      return res.status(400).json({ message: 'At least one field is required to update.' });
+  }
+
+  try {
+      // Find the user by ID
+      const user = await User.findById(userId);
+      if (!user) {
+          return res.status(404).json({ message: 'User not found' });
+      }
+
+      // Update fields only if they are provided in the request body
+      if (name) user.name = name;
+      if (email) user.email = email;
+      if (password) user.password = password; // Ensure you hash the password before saving
+      if (role) user.role = role;
+      if (status) user.status = status;
+
+      // Save the updated user details
+      await user.save();
+
+      console.log('User updated successfully');
+      return res.status(200).json({ message: 'User updated successfully', user });
+  } catch (error) {
+      console.error('Error updating user:', error);
+      return res.status(500).json({ message: 'Failed to update user' });
+  }
+};
+
   
