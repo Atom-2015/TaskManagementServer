@@ -15,7 +15,8 @@ const TaskSchema = new mongoose.Schema({
     required: true,
     ref: 'User'
   }, // Reference to Users
-
+  
+  //Project Dropdown
   project_id: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Project'
@@ -23,24 +24,47 @@ const TaskSchema = new mongoose.Schema({
   due_date: { type: Date },
   status: {
     type: String,
-     enum: ['Pending', 'In Progress', 'Completed'],
-     default: 'Pending'
+    enum: ['Pending', 'In Progress', 'Completed'],
+    default: 'Pending'
   },
-  priority: { type: String, enum: ['High', 'Medium', 'Low'], 
-  required: true ,
-  default:'Low'
 
-},
-completedUnit:{
-  type:Number,
-  default:0
-},
-totalunit:{
-  type:Number,
-},
-unittype:{
-  type:String,
-},
+
+  //filename
+  fileName:{
+    type:String,
+    default:"",
+  },
+
+  //repeat task
+  repeat:{
+    type:Boolean,
+    default:false
+  
+  },
+
+  //reminder task
+  reminder:{
+    type:Number,
+  },
+
+
+  
+  priority: {
+    type: String, enum: ['High', 'Medium', 'Low'],
+    required: true,
+    default: 'Low'
+
+  },
+  completedUnit: {
+    type: Number,
+    default: 0
+  },
+  totalunit: {
+    type: Number,
+  },
+  unittype: {
+    type: String,
+  },
   comments: [
     {
       comment_id: { type: String },

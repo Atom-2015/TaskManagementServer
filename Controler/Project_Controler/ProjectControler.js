@@ -42,6 +42,8 @@ module.exports.createProject = async (req, res) => {
 
 
 module.exports.HandleAllProjects = async (req, res) => {
+
+  console.log(`body ${JSON.stringify(req.body)}`)
     try {
       // Fetch all projects from the database
       const projects = await Projects.find();

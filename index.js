@@ -5,6 +5,7 @@ const express = require('express');
 const db = require('./config/mongoose');
 // const helmet = require('helmet');
 const cors = require('cors');
+const bodyparser = require('body-parser')
 
 const numCPUs = os.cpus().length; // Get the number of CPU cores
 
@@ -29,9 +30,17 @@ if (cluster.isMaster) {
   // Middleware
   app.use(express.json({ limit: '20mb' }));
   app.use(cors({ origin: '*' }));
+  app.use(bodyparser.json())
 
   // Routes
   app.use('/api', require('./Route/index'));
+   
+  // app.post('/api/user/signin' , async(req , res)=>{
+  //   console.log("req the body " , req.body)
+  //   return res.status(200).json({
+  //     message:"sssss"
+  //   })
+  // })
 
   // Server setup
   app.listen(PORT, "0.0.0.0", () => {

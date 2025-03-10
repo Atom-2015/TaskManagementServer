@@ -67,7 +67,7 @@ module.exports.HandleSignin = async (req, res) => {
             email: user.email,
             name: user.name,
             company_id:user.company_id
-        },privated, { expiresIn: '1d' });
+        },privated, { expiresIn: '30d' });
         // return res.status(200).json({ token });
         // console.log("************" , user.body.email);
         return res.json({status:200 , user:token , company_id:user.company_name})
