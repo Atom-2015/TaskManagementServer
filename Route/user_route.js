@@ -10,8 +10,10 @@ router.post('/signin', UserControler.HandleSignin);
 router.post('/adduser' , UserControler.HandleAddUser);
 
 // Api to get list of users
-router.get('/userlist' , UserControler.HandleAllUserlist )
+router.get('/userlist' , UserControler.HandleAllUserlist );
 
+// Edit user
+router.put('/updateuser/:id' , UserControler.HandleEditUser);
 
 
 
