@@ -5,18 +5,86 @@ const Task = require('../../Modal/Task');
 
  
 
+// module.exports.HandleTaskCreation = async (req, res) => {
+//     const { title, description, assigned_to, assigned_by, due_date, priority, totalunit, unittype } = req.body;
+
+//     // Validate required fields
+//     if ([title, assigned_to, assigned_by, due_date, totalunit, unittype ].some(field => field == null || field === '')) {
+//         return res.status(400).json({
+//             message: "Please fill all the fields",
+//             status: false
+//         });
+//     }
+
+//  const project_id = req.headers['x-project-id'];
+//     try {
+//         // Create the task
+//         const newTask = await Task.create({
+//             title,
+//             description,
+//             project_id,
+//             assigned_to,
+//             assigned_by,
+//             due_date,
+//             priority,
+//             totalunit,
+//             unittype,
+             
+//         });
+
+//         if (!newTask) {
+//             return res.status(500).json({
+//                 message: "Task creation failed",
+//                 status: false
+//             });
+//         }
+
+//         // Add the task to the project's task list
+//         const project = await Project.findById(project_id);
+//         if (!project) {
+//             return res.status(404).json({
+//                 message: "Project not found",
+//                 status: false
+//             });
+//         }
+
+//         // console.log(`project is ${project}`);
+
+//         project.tasks.push(newTask._id);
+//         await project.save();
+
+//         return res.status(201).json({
+//             message: "Task created successfully",
+//             status: true,
+//             data: newTask
+//         });
+
+//     } catch (error) {
+//         console.error("Error creating task:", error);
+//         return res.status(500).json({
+//             message: "Internal Server Error",
+//             status: false
+//         });
+//     }
+// };
+
+
 module.exports.HandleTaskCreation = async (req, res) => {
-    const { title, description, assigned_to, assigned_by, due_date, priority, totalunit, unittype } = req.body;
+    const { 
+        title, description, assigned_to, assigned_by, due_date, priority, 
+        totalunit, unittype, status, fileName, repeat, reminder, 
+        completedUnit, comments, category, loop_user, attachment, clock 
+    } = req.body;
 
     // Validate required fields
-    if ([title, assigned_to, assigned_by, due_date, totalunit, unittype ].some(field => field == null || field === '')) {
+    if ([title, assigned_to, assigned_by, due_date].some(field => field == null || field === '')) {
         return res.status(400).json({
-            message: "Please fill all the fields",
+            message: "Please fill all the required fields",
             status: false
         });
     }
 
- const project_id = req.headers['x-project-id'];
+    const project_id = req.headers['x-project-id'];
     try {
         // Create the task
         const newTask = await Task.create({
@@ -29,7 +97,16 @@ module.exports.HandleTaskCreation = async (req, res) => {
             priority,
             totalunit,
             unittype,
-             
+            status,
+            fileName,
+            repeat,
+            reminder,
+            completedUnit,
+            comments,
+            category,
+            loop_user,
+            attachment,
+            clock
         });
 
         if (!newTask) {
@@ -48,8 +125,6 @@ module.exports.HandleTaskCreation = async (req, res) => {
             });
         }
 
-        // console.log(`project is ${project}`);
-
         project.tasks.push(newTask._id);
         await project.save();
 
@@ -58,7 +133,6 @@ module.exports.HandleTaskCreation = async (req, res) => {
             status: true,
             data: newTask
         });
-
     } catch (error) {
         console.error("Error creating task:", error);
         return res.status(500).json({

@@ -2,7 +2,9 @@ const cluster = require('cluster');
 const os = require('os');
 const express = require('express');
 // const jwt = require('jsonwebtoken');
-const db = require('./config/mongoose');
+// const db = require('./config/mongoose');
+const db = require('./Config/mongoose');
+
 // const helmet = require('helmet');
 const cors = require('cors');
 const bodyparser = require('body-parser')
