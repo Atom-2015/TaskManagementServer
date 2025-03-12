@@ -6,7 +6,7 @@ module.exports.createProject = async (req, res) => {
     const { name, description, start_date, end_date, team_members, status, budget } = req.body;
 
     // Validate required fields
-    if (!name || !start_date || !status) {
+    if (!name || !start_date) {
         console.log('Validation failed: Missing required fields');
         return res.status(400).json({ message: 'Name, start_date, and status are required' });
     }

@@ -89,13 +89,17 @@ const TaskSchema = new mongoose.Schema({
   description: { type: String },
   assigned_to: {
     type: mongoose.Schema.Types.ObjectId,
-    required: true,
+ 
     ref: 'User'
   }, // Reference to Users
 
+  ProjectName:{
+    type:String
+  },
+
   assigned_by: {
     type: mongoose.Schema.Types.ObjectId,
-    required: true,
+    
     ref: 'User'
   }, // Reference to Users
   
@@ -130,7 +134,7 @@ const TaskSchema = new mongoose.Schema({
 
   priority: {
     type: String, enum: ['High', 'Medium', 'Low'],
-    required: true,
+    
     default: 'Low'
   },
   completedUnit: {
@@ -155,7 +159,7 @@ const TaskSchema = new mongoose.Schema({
   // New fields added
   category: { type: String },
   loop_user: [{ type: mongoose.Schema.Types.ObjectId,
-    required: true,
+  
     ref: 'User'  }],
   attachment: { type: Array, default: [] },
   clock: {
