@@ -7,7 +7,12 @@ router.post('/addproject' , ProjectControler.createProject);
 
 
 // end point to get list of all projects 
-router.get('/allprojects' , ProjectControler.HandleAllProjects )
+router.get('/allprojects' , ProjectControler.HandleAllProjects );
+
+
+
+// end point for perticular project detail 
+router.get('/projectDetail' , ProjectControler.HandleGetDetailProjectData)
 
 
 module.exports = router; 

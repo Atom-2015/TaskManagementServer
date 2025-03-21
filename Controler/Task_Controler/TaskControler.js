@@ -72,7 +72,7 @@ const Task = require('../../Modal/Task');
 module.exports.HandleTaskCreation = async (req, res) => {
     const { 
         title, ProjectName,description, assigned_to, assigned_by, due_date, priority, 
-        totalunit, unittype, status, fileName, repeat, reminder, 
+        totalunit, unittype, status, fileName, repeat, reminder, repeatDates,budget,
         completedUnit, comments, category, loop_user, attachment, clock 
     } = req.body;
 
@@ -84,13 +84,18 @@ module.exports.HandleTaskCreation = async (req, res) => {
         });
     }
 
+    const project = Project.create({
+        name:title
+    })
+
  const project_id = req.headers['x-project-id'];
     try {
         // Create the task
         const newTask = await Task.create({
             title,
             ProjectName,
-            
+            budget,
+            repeatDates,
             description,
            project_id,
             assigned_to,
@@ -101,7 +106,7 @@ module.exports.HandleTaskCreation = async (req, res) => {
             unittype,
             status,
             fileName,
-            repeat,
+            
             reminder,
             completedUnit,
             comments,

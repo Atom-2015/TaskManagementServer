@@ -121,6 +121,12 @@ const TaskSchema = new mongoose.Schema({
     default: "",
   },
 
+
+  repeatDates:{
+    type:[String],
+    default:[]
+  },
+
   //repeat task
   repeat: {
     type: Boolean,
@@ -129,7 +135,8 @@ const TaskSchema = new mongoose.Schema({
 
   //reminder task
   reminder: {
-    type: Number,
+    type: Map,
+    of: String,  // This allows you to store an object with keys and string values
   },
 
   priority: {

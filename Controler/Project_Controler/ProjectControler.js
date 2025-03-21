@@ -67,4 +67,39 @@ module.exports.HandleAllProjects = async (req, res) => {
       });
     }
   };
+
+
+
+
+
+
+  // api to get the data of specific data 
+
+module.exports.HandleGetDetailProjectData = async (req  , res)=>{
+   const projectid = req.headers['x-project-id'];
+   //
+   if(!projectid){
+    return res.status(302).json({
+      message:"Project Id is wrong or missing"
+    })
+   }
+   try {
+    const response = await Projects.findById(projectid);
+    if(!response){
+      return res.status(405).json({
+        message:"Missing Data"
+      })
+    }
+
+    return res.status(200).json({
+      message:"Data found",
+      data : response
+    })
+   } catch (error) {
+    console.log(error)
+    return res.status(404).json({
+      message:"Internal server Error"
+    })
+   }
+}
   
