@@ -1,9 +1,10 @@
 const User = require('../../Modal/User');
 const Projects = require('../../Modal/Projects');
+const Task = require('../../Modal/Task');
 
 
 module.exports.createProject = async (req, res) => {
-    const { name, description, start_date, end_date, team_members, status, budget } = req.body;
+    const { name, description, start_date, end_date, team_members, status, budget,country,state,city, Area } = req.body;
 
     // Validate required fields
     if (!name || !start_date) {
@@ -28,6 +29,10 @@ module.exports.createProject = async (req, res) => {
             team_members,
             status,
             budget,
+            country,
+            state,
+            city,
+            Area
         });
 
         console.log('Project created successfully');
@@ -84,16 +89,23 @@ module.exports.HandleGetDetailProjectData = async (req  , res)=>{
     })
    }
    try {
-    const response = await Projects.findById(projectid);
+    const response = await Projects.findById(projectid).populate('tasks'    ).exec();
     if(!response){
       return res.status(405).json({
         message:"Missing Data"
       })
     }
 
+
+    // const response2 = await Promise.all(
+    //   response.tasks.map((t) => Task.findById(t._id).select(" title "))
+    // );
+    
+
     return res.status(200).json({
       message:"Data found",
-      data : response
+      data : response,
+      // task:response2
     })
    } catch (error) {
     console.log(error)
