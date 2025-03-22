@@ -3,7 +3,7 @@ const User = require('../../Modal/User');
 const Task = require('../../Modal/Task');
 
 
- 
+
 
 // module.exports.HandleTaskCreation = async (req, res) => {
 //     const { title, description, assigned_to, assigned_by, due_date, priority, totalunit, unittype } = req.body;
@@ -29,7 +29,7 @@ const Task = require('../../Modal/Task');
 //             priority,
 //             totalunit,
 //             unittype,
-             
+
 //         });
 
 //         if (!newTask) {
@@ -70,10 +70,10 @@ const Task = require('../../Modal/Task');
 
 
 module.exports.HandleTaskCreation = async (req, res) => {
-    const { 
-        title, ProjectName,description, assigned_to, assigned_by, due_date, priority, 
-        totalunit, unittype, status, fileName, repeat, reminder, repeatDates,budget,
-        completedUnit, comments, category, loop_user, attachment, clock 
+    const {
+        title, ProjectName, description, assigned_to, assigned_by, end_date, priority,
+        totalunit, unittype, status, fileName, repeatType, reminder, repeatDates, budget,
+        completedUnit, comments, category, loop_users, attachment, clock
     } = req.body;
 
     // Validate required fields
@@ -84,37 +84,51 @@ module.exports.HandleTaskCreation = async (req, res) => {
         });
     }
 
-    const project = Project.create({
-        name:title
-    })
 
- const project_id = req.headers['x-project-id'];
+
+    // const project = Project.create({
+    //     name: title
+    // })
+
+    // const project_id = req.headers['x-project-id'];
     try {
+
+        const project_id = req.headers['x-project-id'];
+        const project = await Project.findById(project_id);
+
+        if(!project || !project_id){
+            return res.status(305).json({
+                message:"No Project id"
+            })
+        }
         // Create the task
         const newTask = await Task.create({
             title,
             ProjectName,
             budget,
-            repeatDates,
+            // repeatDates,
             description,
-           project_id,
+            project_id:project_id,
             assigned_to,
             assigned_by,
-            due_date,
+            end_date,
             priority,
             totalunit,
             unittype,
             status,
             fileName,
-            
             reminder,
-            completedUnit,
-            comments,
+            // completedUnit,
+            // comments,
             category,
-            loop_user,
-            attachment,
-            clock
+            // loop_users,
+            // attachment,
+            // clock,
+            repeatType
         });
+        newTask.loop_users.push(loop_users)
+
+        await  newTask.save()
 
         if (!newTask) {
             return res.status(500).json({
@@ -124,15 +138,18 @@ module.exports.HandleTaskCreation = async (req, res) => {
         }
 
         // Add the task to the project's task list
-        const project = await Project.findById(project_id);
-        if (!project) {
-            return res.status(404).json({
-                message: "Project not found",
-                status: false
-            });
-        }
+        // const project = await Project.findById(project_id);
+        // if (!project) {
+        //     return res.status(404).json({
+        //         message: "Project not found",
+        //         status: false
+        //     });
+        // }
 
-        project.tasks.push(newTask._id);
+       console.log("this is project id ", project_id)
+
+
+       project.tasks.push(newTask._id);
         await project.save();
 
         return res.status(201).json({
@@ -154,7 +171,7 @@ module.exports.HandleTaskCreation = async (req, res) => {
 
 
 // Api to update the task status and unitj
- module.exports.HandleTaskUpdate = async (req, res) => {
+module.exports.HandleTaskUpdate = async (req, res) => {
     const { taskId, completedUnit } = req.body;
 
     // Validate required fields
@@ -203,33 +220,33 @@ module.exports.HandleAllTaskList = async (req, res) => {
     // Check if the 'x-project-id' header is present
     // console.log("api called", req.headers['x-project-id'])
     if (!req.headers['x-project-id']) {
-      return res.status(400).json({
-        success: false,
-        message: "Project ID is required in the 'x-project-id' header.",
-      });
+        return res.status(400).json({
+            success: false,
+            message: "Project ID is required in the 'x-project-id' header.",
+        });
     }
-  
-    try {
-      // Extract the project ID from the header
-      const projectId = req.headers['x-project-id'];
 
-      const tasks = await Task.find({ project_id: projectId });
-  
-      // Return the tasks in the response
-      res.status(200).json({
-        success: true,
-        data: tasks,
-      });
+    try {
+        // Extract the project ID from the header
+        const projectId = req.headers['x-project-id'];
+
+        const tasks = await Task.find({ project_id: projectId });
+
+        // Return the tasks in the response
+        res.status(200).json({
+            success: true,
+            data: tasks,
+        });
     } catch (error) {
-      // Handle errors and send a response
-      res.status(500).json({
-        success: false,
-        message: 'Failed to retrieve tasks',
-        error: error.message,
-      });
+        // Handle errors and send a response
+        res.status(500).json({
+            success: false,
+            message: 'Failed to retrieve tasks',
+            error: error.message,
+        });
     }
-  };
-  
+};
+
 
 
 
@@ -238,27 +255,27 @@ module.exports.HandleTaskAssignedToUser = async (req, res) => {
     const email = req.user.email;
     console.log(`user id is ${email}`)
     try {
-        const userid = await User.findOne({email:email});
-        if(!userid){
+        const userid = await User.findOne({ email: email });
+        if (!userid) {
             return res.status(404).json({
-                message:"No user found"
+                message: "No user found"
             })
         }
         // const task = await Task.find({assigned_to:userid._id});
-        const task = await Task.find({assigned_to:userid._id}).populate('project_id');
+        const task = await Task.find({ assigned_to: userid._id }).populate('project_id');
 
-        if(!task){
+        if (!task) {
             return res.status(304).json({
-                message:"No task found"
+                message: "No task found"
             })
         }
         return res.status(200).json({
-            success:true,
-            data:task
+            success: true,
+            data: task
         })
     } catch (error) {
         return res.status(402).json({
-            message:"Internal Server Error"
+            message: "Internal Server Error"
         })
     }
 }
@@ -268,32 +285,32 @@ module.exports.HandleTaskAssignedToUser = async (req, res) => {
 // Task Asigned by me api 
 module.exports.HandleAllTaskAssignedByMe = async (req, res) => {
     try {
-      // Find user ID by email
-      const user = await User.findOne({ email: req.user.email }).select("_id");
-      if (!user) {
-        return res.status(403).json({
-          message: "No user found",
+        // Find user ID by email
+        const user = await User.findOne({ email: req.user.email }).select("_id");
+        if (!user) {
+            return res.status(403).json({
+                message: "No user found",
+            });
+        }
+        // Find tasks assigned by the user
+        const tasks = await Task.find({ assigned_by: user._id });
+        if (tasks.length === 0) {
+            return res.status(404).json({
+                message: "No tasks found assigned by this user",
+            });
+        }
+        // Return tasks
+        return res.status(200).json({
+            message: "Tasks assigned by me",
+            data: tasks,
         });
-      }
-      // Find tasks assigned by the user
-      const tasks = await Task.find({ assigned_by: user._id });
-      if (tasks.length === 0) {
-        return res.status(404).json({
-          message: "No tasks found assigned by this user",
-        });
-      }
-      // Return tasks
-      return res.status(200).json({
-        message: "Tasks assigned by me",
-        data: tasks,
-      });
     } catch (error) {
-      // Error handling
-      console.error("Error in HandleAllTaskAssignedByMe:", error);
-      return res.status(500).json({
-        message: "Internal Server Error",
-        error: error.message,
-      });
+        // Error handling
+        console.error("Error in HandleAllTaskAssignedByMe:", error);
+        return res.status(500).json({
+            message: "Internal Server Error",
+            error: error.message,
+        });
     }
-  };
-  
+};
+

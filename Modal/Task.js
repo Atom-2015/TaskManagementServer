@@ -82,7 +82,7 @@
 
 
 
-const { default: mongoose } = require("mongoose");
+const { default: mongoose, Mongoose } = require("mongoose");
 
 const TaskSchema = new mongoose.Schema({
   title: { type: String, required: true },
@@ -122,14 +122,14 @@ const TaskSchema = new mongoose.Schema({
   },
 
 
-  repeatDates:{
-    type:[String],
-    default:[]
-  },
+  // repeatDates:{
+  //   type:[String],
+  //   default:[]
+  // },
 
   //repeat task
-  repeat: {
-    type: Boolean,
+  repeatType: {
+    type: String,
     default: false
   },
 
@@ -140,10 +140,16 @@ const TaskSchema = new mongoose.Schema({
   },
 
   priority: {
-    type: String, enum: ['High', 'Medium', 'Low'],
+    type: String, 
+    // enum: ['High', 'Medium', 'Low'],
     
-    default: 'Low'
+    // default: 'Low'
   },
+  loop_users:[ 
+    type= mongoose.Schema.Types.ObjectId,
+    
+    ref= 'User'
+   ],
   completedUnit: {
     type: Number,
     default: 0
@@ -153,6 +159,9 @@ const TaskSchema = new mongoose.Schema({
   },
   unittype: {
     type: String,
+  },
+  start_date:{
+    type:Date
   },
   comments: [
     {
