@@ -8,11 +8,11 @@ const ProjectSchema = new mongoose.Schema({
   end_date: { type: Date },
   // manager_id: { type: String, required: true, ref: 'User' }, // Reference to Users
   team_members: [{ type: String, ref: 'User' }], // Array of User IDs
-  status: {
+  sector: {
     type: String,
-    enum: ['Active', 'Completed', 'On Hold'],
-    default: 'Active',
-    required: true
+    // enum: ['Active', 'Completed', 'On Hold'],
+    // default: 'Active',
+    // required: true
   },
   country: { type: String },
   state:{type:String},

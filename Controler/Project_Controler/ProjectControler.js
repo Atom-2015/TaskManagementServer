@@ -4,7 +4,7 @@ const Task = require('../../Modal/Task');
 
 
 module.exports.createProject = async (req, res) => {
-    const { name, description, start_date, end_date, team_members, status, budget,country,state,city, Area } = req.body;
+    const { name, description, start_date, end_date, team_members, sector, budget,country,state,city, Area } = req.body;
 
     // Validate required fields
     if (!name || !start_date) {
@@ -27,7 +27,7 @@ module.exports.createProject = async (req, res) => {
             start_date,
             end_date,
             team_members,
-            status,
+            sector,
             budget,
             country,
             state,
