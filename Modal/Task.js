@@ -85,7 +85,7 @@
 const { default: mongoose, Mongoose } = require("mongoose");
 
 const TaskSchema = new mongoose.Schema({
-  title: { type: String, required: true },
+  name: { type: String, required: true },
   description: { type: String },
   assigned_to: {
     type: mongoose.Schema.Types.ObjectId,
@@ -111,8 +111,8 @@ const TaskSchema = new mongoose.Schema({
   due_date: { type: Date },
   status: {
     type: String,
-    enum: ['Pending', 'In Progress', 'Completed'],
-    default: 'Pending'
+    // enum: ['Pending', 'In Progress', 'Completed'],
+    // default: 'Pending'
   },
 
   //filename

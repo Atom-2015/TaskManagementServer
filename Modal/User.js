@@ -3,6 +3,7 @@ const mongoose = require('mongoose');
 const UserSchema = new mongoose.Schema({
   
   name: { type: String, required: true },
+  last_name:{type:String,required:true},
   email: { type: String, required: true, match: /.+@.+\..+/ },
   phone: { type: String },
   department_id: { 
@@ -10,11 +11,14 @@ const UserSchema = new mongoose.Schema({
     ref: 'Department',
    }, // Reference to Departments
   designation: { type: String },
-  date_of_joining: { type: Date },
+  dob: { type: Date },
   password:{
        type:String,
        required:true
   },
+  state:{type:String,required:true},
+
+  city:{type:String,required:true},
   // manager_id: { type: String },  
   salary: { type: Number },
   status:{
