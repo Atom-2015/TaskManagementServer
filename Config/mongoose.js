@@ -8,7 +8,7 @@ const mongoose = require('mongoose');
 
 (async()=>{
   try {
-    const response = await mongoose.connect('mongodb://127.0.0.1:27017/taskmanagement');
+    const response = await mongoose.connect('mongodb+srv://aditya:ZQ9jPtfvnvqsWJ7X@hub.18kar.mongodb.net/taskmanagement');
     console.log("***************connected to database***************", response.connection.host);
   } catch (error) {
     console.error("*************error in connecting to database********************", error);
