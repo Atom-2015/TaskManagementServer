@@ -13,11 +13,11 @@ module.exports.createProject = async (req, res) => {
     }
 
     // Validate status
-    const validStatuses = ['Active', 'Completed', 'On Hold'];
-    if (!validStatuses.includes(status)) {
-        console.log('Validation failed: Invalid status');
-        return res.status(400).json({ message: `Status must be one of ${validStatuses.join(', ')}` });
-    }
+    // const validStatuses = ['Active', 'Completed', 'On Hold'];
+    // if (!validStatuses.includes(status)) {
+    //     console.log('Validation failed: Invalid status');
+    //     return res.status(400).json({ message: `Status must be one of ${validStatuses.join(', ')}` });
+    // }
 
     try {
         // Create new project

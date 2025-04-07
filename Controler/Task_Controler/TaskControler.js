@@ -71,13 +71,13 @@ const Task = require('../../Modal/Task');
 
 module.exports.HandleTaskCreation = async (req, res) => {
     const {
-        title, ProjectName, description, assigned_to, assigned_by, end_date, priority,
+        name, ProjectName, description, assigned_to, assigned_by, end_date, priority,
         totalunit, unittype, status, fileName, repeatType, reminder, repeatDates, budget,
         completedUnit, comments, category, loop_users, attachment, clock
     } = req.body;
 
     // Validate required fields
-    if ([title].some(field => field == null || field === '')) {
+    if ([name].some(field => field == null || field === '')) {
         return res.status(400).json({
             message: "Please fill all the required fields",
             status: false
@@ -103,7 +103,7 @@ module.exports.HandleTaskCreation = async (req, res) => {
         }
         // Create the task
         const newTask = await Task.create({
-            title,
+            name,
             ProjectName,
             budget,
             // repeatDates,

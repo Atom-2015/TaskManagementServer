@@ -6,7 +6,7 @@ const jwt = require('jsonwebtoken');
 
 
 module.exports.HandleAddUser = async (req, res) => {
-     const { name, email, password, phone, designation, date_of_joining, salary, role , } = req.body;
+     const { name, email, password, phone, designation, date_of_joining,dob,last_name,state,city, salary, role , } = req.body;
  
      // Check required fields
       
@@ -15,6 +15,12 @@ module.exports.HandleAddUser = async (req, res) => {
      if ([name, email, password, role].some(field => !field || field.trim() === "")) {
          console.log('Validation failed: Missing fields');
          return res.status(400).json({ message: 'All fields are required' });
+     }
+     if(!dob  || !last_name ||  !state){
+          return res.status(400).json({
+            success:false,
+            message:"error in dob,last_name,state"
+          })
      }
  
      try {
@@ -28,9 +34,14 @@ module.exports.HandleAddUser = async (req, res) => {
          // Create new user
          const newUser = await User.create({
              name,
+             last_name,
+             dob,
+             state,
              email,
              password,
              phone,
+             city,
+
              designation,
              date_of_joining,
              salary,
