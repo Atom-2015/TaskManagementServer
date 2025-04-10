@@ -20,21 +20,17 @@ module.exports.HandleSubTaskCreation = async (req, res) => {
     const task_id = req.headers['x-task-id'];
 
 
-    if (!name || !assigned_userid || !priority  || !task_id) {
-      return res.status(400).json({
-        success: false,
-        message: "Missing required fields"
-      });
-    }
- 
+    // console.log(`this is response ${req.body}`)
+     
+    
 
 
-    const task = await Task.findById(task_id);
+    const task = await Task.findById({_id: task_id});
     if (!task) {
 
       const subtask = await SubTask.create({
         name,
-        project_id,
+      
         assigned_userid,
         task_id,
         priority,
@@ -79,4 +75,27 @@ module.exports.HandleSubTaskCreation = async (req, res) => {
   }
 };
 
+
+
+module.exports.HandleSubTaskGet=async (req,res)=>{
+  try{
+  const task_id = req.headers['x-task-id'];
+  const subtask = await SubTask.find({task_id});
+
+ 
+  // Return the tasks in the response
+  res.status(200).json({
+      success: true,
+      data: subtask,
+  });
+} catch (error) {
+  // Handle errors and send a response
+  res.status(500).json({
+      success: false,
+      message: 'Failed to retrieve tasks',
+      error: error.message,
+  });
+
+}
+}
 
