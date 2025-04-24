@@ -47,23 +47,23 @@ const CompanySchema=new mongoose.Schema({
         type:Number,
         required:true,
     },
-    password:{
+    company_password:{
         type:String,
         required:true,
     },
 
-    location:[{
-        _id: false,
+    
+       
         country:{
             type:String,
         },
         state:{
             type:String,
         },
-        cities:{
+        city:{
             type:String
         }
-    }]
+    
 
 
     

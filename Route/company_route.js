@@ -4,7 +4,7 @@ const CompanyController=require('../Controler/Company_Controller/ConpanyControll
 
 router.post('/addCompany',CompanyController.HandleCompanyCreate);
 router.get('/allcompany',CompanyController.HandleGetAllCompany);
-router.delete('/delcompany/:companyId',CompanyController.HandleCompanyDelete);
-router.put('/editcompany/:companyId',CompanyController.HandleCompanyEdit);
+router.delete('/:companyId',CompanyController.HandleCompanyDelete);
+router.put('/:companyId',CompanyController.HandleCompanyEdit);
 
 module.exports =router;

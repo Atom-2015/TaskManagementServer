@@ -114,4 +114,43 @@ module.exports.HandleGetDetailProjectData = async (req  , res)=>{
     })
    }
 }
+
+module.exports.HandleDeleteProject = async (req, res) => {
+  try {
+    const projectId = req.headers['x-project-id'] || req.params.projectId;
+
+
+    //const {projectId} = req.params;
+    if (!projectId) {
+      return res.status(400).json({
+        success: false,
+        message: "Project ID is missing in the request.",
+      });
+    }
+
+    const deletedProject = await Projects.findByIdAndDelete(projectId);
+
+    if (!deletedProject) {
+      return res.status(404).json({
+        success: false,
+        message: "No project found",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Project deleted successfully",
+      data: deletedProject,
+    });
+
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({
+      success: false,
+      message: "Error occurred while deleting the project.",
+    });
+  }
+};
+
+
   

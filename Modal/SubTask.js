@@ -35,6 +35,14 @@ const subTaskSchema = new mongoose.Schema({
 
     },
 
+    checklist: [
+        {
+          item: { type: String},
+          toCheck:{type:String},
+          checked: { type: Boolean, default: false }
+        }
+      ],
+
     cost: {
         type: Number,
         required: true

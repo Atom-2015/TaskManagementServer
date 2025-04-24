@@ -1,7 +1,7 @@
 const Company=require("../../Modal/Conpany");
  
 module.exports.HandleCompanyCreate= async (req,res) => {
-    const {company_name,client_name,email,joinDate,validity,cost,password,location}=req.body;
+    const {company_name,client_name,email,joinDate,validity,cost,company_password,country,state,city}=req.body;
 
 
     if([company_name,client_name,joinDate,validity,].some(field=> !field || field.trim() === "")){
@@ -11,6 +11,7 @@ module.exports.HandleCompanyCreate= async (req,res) => {
             message:"All field are requried"
         })
     }
+
 
     try{
         const existingCompany= await Company.findOne({email})
@@ -28,10 +29,13 @@ module.exports.HandleCompanyCreate= async (req,res) => {
             client_name,
             email,
             joinDate,
+            company_password,
             validity,
             cost,
-            password,
-            location
+            
+            country,
+            state,
+            city
         })
 
         console.log(`karo api ${newCompany}`)
@@ -47,7 +51,8 @@ module.exports.HandleCompanyCreate= async (req,res) => {
         console.log('Error creating company',error);
         return res.status(500).json({
             success:false,
-            message:"failed to create company"
+            message:"failed to create company",
+            error:error
         })
     }
 
@@ -92,7 +97,10 @@ module.exports.HandleCompanyEdit = async(req,res) => {
             joinDate,
             validity,
             cost,
-            location
+             
+            country,
+            state,
+            city
         }=req.body;
 
         const editcompany = await Company.findByIdAndUpdate(companyId,{company_name,
@@ -101,7 +109,10 @@ module.exports.HandleCompanyEdit = async(req,res) => {
             joinDate,
             validity,
             cost,
-            location},{new : true});
+             
+            country,
+            state,
+            city},{new : true});
 
         if(!editcompany){
             return res.status(404).json({

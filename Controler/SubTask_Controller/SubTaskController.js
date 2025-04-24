@@ -11,7 +11,8 @@ module.exports.HandleSubTaskCreation = async (req, res) => {
       start_date,
       end_date,
       cost,
-      status
+      status,
+      checklist
     } = req.body;
 
 
@@ -37,7 +38,8 @@ module.exports.HandleSubTaskCreation = async (req, res) => {
         start_date,
         end_date,
         cost,
-        status
+        status,
+        checklist
       })
 
       if(!subtask){
@@ -55,7 +57,8 @@ module.exports.HandleSubTaskCreation = async (req, res) => {
       task_id,
       end_date,
       cost,
-      status
+      status,
+      checklist
     });
 
     if(!newSubTask){
@@ -117,7 +120,7 @@ module.exports.HnadleEditSubTask=async(req,res)=>{
       startDate,
       
       endDate,
-      cost,
+      cost,checklist,
       status}=req.body;
       console.log(`subtask paramse se ${SubtaskId}`)
       console.log(req.body);
@@ -131,7 +134,8 @@ module.exports.HnadleEditSubTask=async(req,res)=>{
           start_date:startDate,
           end_date:endDate,
           cost,
-          status
+          status,
+          checklist
         },
         { new: true }
       );

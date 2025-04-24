@@ -12,7 +12,12 @@ router.get('/allprojects' , ProjectControler.HandleAllProjects );
 
 
 // end point for perticular project detail 
-router.get('/projectDetail' , ProjectControler.HandleGetDetailProjectData)
+router.get('/projectDetail' , ProjectControler.HandleGetDetailProjectData);
+
+
+//delete project ki api
+router.delete('/:projectId',ProjectControler.HandleDeleteProject);
 
 
 module.exports = router; 
+

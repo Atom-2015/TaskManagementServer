@@ -1,12 +1,13 @@
  
 const User = require('../../Modal/User');
+const Company = require('../../Modal/Conpany')
 const jwt = require('jsonwebtoken');
 
 
 
 
 module.exports.HandleAddUser = async (req, res) => {
-     const { name, email, password, phone, designation, date_of_joining,dob,last_name,state,city, salary, role , } = req.body;
+     const { name, email,Company, password, phone, designation, date_of_joining,dob,last_name,state,city, salary, role , } = req.body;
  
      // Check required fields
       
@@ -21,6 +22,13 @@ module.exports.HandleAddUser = async (req, res) => {
             success:false,
             message:"error in dob,last_name,state"
           })
+     }
+
+     if(!Company){
+      return res.status(400).json({
+        success:false,
+        message:"Companu is required"
+      })
      }
  
      try {
@@ -46,6 +54,7 @@ module.exports.HandleAddUser = async (req, res) => {
              date_of_joining,
              salary,
              role,
+             Company,
          });
  
          console.log('User created successfully');
@@ -63,26 +72,34 @@ module.exports.HandleAddUser = async (req, res) => {
 const privated = process.env.SECRET_KEY;
 
 module.exports.HandleSignin = async (req, res) => {
-  console.log("Api called for creating sesson")
+  // console.log("Api called for creating sesson")
     try {    
-        console.log("This is body " ,req.body);
-            
+        // console.log("This is body " ,req.body);
         const user = await User.findOne({ email: req.body.email });
-        if (!user) {
+        const company = await Company.findOne({email: req.body.email})
+        if (!user && !company) {
             return res.status(400).json({ message: 'User not found' });
         }        
-        if (user.password !== req.body.password) {
-            return res.status(400).json({ message: 'Invalid password' });
-        }        
-        const token = jwt.sign({
+        console.log(`thisis user ${user} thisis company ${company}`)
+        if (user?.password !== req.body.password && company?.company_password !== req.body.password) {
+            return res.status(400).json({ message: 'Invalid password' });    
+        } 
+        if(user){ 
+          const token = jwt.sign({
             email: user.email,
             name: user.name,
             company_id:user.company_id
-        },privated, { expiresIn: '30d' });
-        // return res.status(200).json({ token });
-        // console.log("************" , user.body.email);
+        },privated, { expiresIn: '30d' }); 
         return res.json({status:200 , user:token , company_id:user.company_name})
-
+        }   
+        // console.log(company.company_name)  user company id 
+        // useremail => check companyemail  ( company => user table and company table check email )
+        const token = jwt.sign({
+          email: company.email,
+          name: company.company_name,
+          company_id:company._id
+      },privated, { expiresIn: '30d' }); 
+      return res.json({status:200 , user:token  })
     } catch (error) {
         console.log(`***************************error in Sign In**************************** ${error}`);
         return res.status(500).json({ message: 'Internal server error', error });
