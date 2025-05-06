@@ -15,6 +15,9 @@ router.get('/userlist' , UserControler.HandleAllUserlist );
 // Edit user
 router.put('/updateuser/:id' , UserControler.HandleEditUser);
 
+//deleted user
+router.delete('/delete/:id',UserControler.HandleDeleteUser);
 
 
-module.exports = router; 
+
+module.exports = router;   

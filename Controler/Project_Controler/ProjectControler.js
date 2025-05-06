@@ -4,26 +4,37 @@ const Task = require('../../Modal/Task');
 
 
 module.exports.createProject = async (req, res) => {
-    const { name, description, start_date, end_date, team_members, sector, budget,country,state,city, Area } = req.body;
+  try {
+    
+  const {
+        name, description,  start_date, end_date,
+        team_members, sector, budget, country, state, city, Area
+    } = req.body;
+    console.log(req.body)
+
+    const trimmedname=name.trimStart();
 
     // Validate required fields
-    if (!name || !start_date) {
+    if (name==="" || start_date==="") {
         console.log('Validation failed: Missing required fields');
-        return res.status(400).json({ message: 'Name, start_date, and status are required' });
+        return res.status(400).json({ message: 'Name and start_date are required' });
     }
+console.log(`thisis name ${name} , `)
+   
+        // Check if project name already exists
+        const projectName = await Projects.findOne({ name:trimmedname });
+        if (projectName) {
+            return res.status(400).json({
+                success: false,
+                message: 'Project name already exists. Please choose a different one.'
+            });
+        }
 
-    // Validate status
-    // const validStatuses = ['Active', 'Completed', 'On Hold'];
-    // if (!validStatuses.includes(status)) {
-    //     console.log('Validation failed: Invalid status');
-    //     return res.status(400).json({ message: `Status must be one of ${validStatuses.join(', ')}` });
-    // }
-
-    try {
         // Create new project
         const newProject = await Projects.create({
-            name,
+            name:trimmedname,
             description,
+            //Company,
             start_date,
             end_date,
             team_members,
@@ -38,7 +49,7 @@ module.exports.createProject = async (req, res) => {
         console.log('Project created successfully');
         return res.status(201).json({ message: 'Project created successfully', project: newProject });
     } catch (error) {
-        console.error('Error creating project:', error);
+        console.error('Error creating project:', error.message);
         return res.status(500).json({ message: 'Failed to create project' });
     }
 };
@@ -89,7 +100,7 @@ module.exports.HandleGetDetailProjectData = async (req  , res)=>{
     })
    }
    try {
-    const response = await Projects.findById(projectid).populate('tasks'    ).exec();
+    const response = await Projects.findById(projectid).populate('tasks'    ) .populate('Company').exec();
     if(!response){
       return res.status(405).json({
         message:"Missing Data"

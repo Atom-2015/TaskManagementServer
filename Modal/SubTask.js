@@ -20,20 +20,29 @@ const subTaskSchema = new mongoose.Schema({
 
     priority: {
         type: String,
-        required: true
+      
     },
 
     start_date: {
         type: Date,
-        required: true
+        
+       
 
     },
 
-    end_date: {
-        type: Date,
-        required: true
-
-    },
+    end_date: [{
+      
+        value:{type:Date},
+        updatedby:{
+            type:String,
+            // required:true
+        },
+        timeUpdated:{
+            type:Date
+        }     
+        
+       
+    }],
 
     checklist: [
         {
@@ -43,15 +52,34 @@ const subTaskSchema = new mongoose.Schema({
         }
       ],
 
-    cost: {
-        type: Number,
-        required: true
+    cost: [{
+        value:{
+            type:Number
+        },
+        updatedby:{
+            type:String,
+            // required:true
+        },
+        timeUpdated:{
+            type:Date
+        }     
 
-    },
+    }],
     status: {
         type: String,
 
-    }
+    },
+
+    updateHistory:[{
+        userId:{type : mongoose.Schema.Types.ObjectId,
+            ref:"User"
+        },
+        field:{type:String},
+        oldValue:mongoose.Schema.Types.Mixed,
+        newValue:mongoose.Schema.Types.Mixed,
+        updatedAt:{type:Date,default:Date.now}
+        
+    }]
 
 
 },{timestamps:true})

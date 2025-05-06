@@ -1,4 +1,5 @@
 const Company=require("../../Modal/Conpany");
+const User=require('../../Modal/User');
  
 module.exports.HandleCompanyCreate= async (req,res) => {
     const {company_name,client_name,email,joinDate,validity,cost,company_password,country,state,city}=req.body;
@@ -158,9 +159,11 @@ module.exports.HandleCompanyDelete = async(req,res) => {
             })
         }
 
+        await User.deleteMany({Company:companyId})
+
         return res.status(200).json({
             success:true,
-            message:"company deleted successfully",
+            message:"company deleted successfully and user alsoe",
         })
 
     }

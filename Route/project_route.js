@@ -3,7 +3,13 @@ const router = express.Router();
 const ProjectControler = require('../Controler/Project_Controler/ProjectControler');
 const isAuthenticated = require('../middleware/isAuthMiddleware');
 
-router.post('/addproject' , ProjectControler.createProject);
+ router.post('/addproject' , ProjectControler.createProject);
+// router.post('/addproject' , async(req , res)=>{
+//    console.log(req.headers["rahul"])
+//    console.log("hitted");
+//    console.log(req.body);
+//    return res.status(200);
+// });
 
 
 // end point to get list of all projects 

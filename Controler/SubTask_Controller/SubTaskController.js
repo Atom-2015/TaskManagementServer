@@ -21,7 +21,7 @@ module.exports.HandleSubTaskCreation = async (req, res) => {
     const task_id = req.headers['x-task-id'];
 
 
-    // console.log(`this is response ${req.body}`)
+     console.log(`this is response ${JSON.stringify(req.body)}`)
      
     
 
@@ -41,10 +41,10 @@ module.exports.HandleSubTaskCreation = async (req, res) => {
         status,
         checklist
       })
-
-      if(!subtask){
-        return res.status(500).json({ message: "Failed to create subtask" });
-      }
+      
+      // if(!subtask){
+      //   return res.status(500).json({ message: "Failed to create subtask" });
+      // }
       return res.status(201).json({ success: true, data:subtask });
 
     }
@@ -61,6 +61,9 @@ module.exports.HandleSubTaskCreation = async (req, res) => {
       checklist
     });
 
+  
+    
+
     if(!newSubTask){
       return res.status(500).json({ message: "Failed to create subtask" });
     }
@@ -69,7 +72,9 @@ module.exports.HandleSubTaskCreation = async (req, res) => {
       message: "Subtask created successfully",
       status: true,
       data: newSubTask
+      
     });
+    
   } catch (error) {
     console.error(error);
     return res.status(500).json({
@@ -112,60 +117,90 @@ module.exports.HandleSubTaskGet=async (req,res)=>{
 }
 }
 
-module.exports.HnadleEditSubTask=async(req,res)=>{
-  try{
-    const {SubtaskId}=req.params;
-    const { subTaskName,user,
-      priority,
-      startDate,
-      
-      endDate,
-      cost,checklist,
-      status}=req.body;
-      console.log(`subtask paramse se ${SubtaskId}`)
-      console.log(req.body);
+module.exports.HnadleEditSubTask = async (req, res) => {
+  try {
+    const username = req.user.name;
+    const { SubtaskId } = req.params;
+    const { subTaskName, user, priority, startDate, endDate, cost, checklist, status } = req.body;
 
-      const subtaskuser = await SubTask.findByIdAndUpdate(
-        SubtaskId,
-        {
-          name:subTaskName,
-          assigned_userid:user,
-          priority,
-          start_date:startDate,
-          end_date:endDate,
-          cost,
-          status,
-          checklist
-        },
-        { new: true }
-      );
-      
+    const subtask = await SubTask.findById(SubtaskId);
+    if (!subtask) {
+      return res.status(404).json({ success: false, message: "Subtask not found" });
+    }
+
+    const updateHistory = [];
+
+    // if (JSON.stringify(subtask.end_date) !== JSON.stringify(endDate)) {
+    //   updateHistory.push({
+    //     userId: user,
+    //     field: "end_date",
+    //     oldValue: subtask.end_date,
+    //     newValue: endDate,
+    //     updateAt: new Date(),
+    //   });
+    // }
+
+    let updatedEndDate= Array.isArray(subtask.end_date) ? [...subtask.end_date] :[];
+    if(JSON.stringify(subtask.end_date) !== JSON.stringify(endDate)){
+      updatedEndDate.push({
+        value: endDate,
+        updatedby:username,
+        timeUpdated:Date.now(),
+      })
+    }
+
+
+    // Corrected part: Use let instead of const to avoid assignment to a constant variable
+    let updatedCost = Array.isArray(subtask.cost) ? [...subtask.cost] : [];
+    
+    if (JSON.stringify(subtask.cost) !== JSON.stringify(cost)) {
+      updatedCost.push({
+        value: cost,
+        updatedby: username,
+        timeUpdated: Date.now(),
+      });
+    }
+
+    const subtaskuser = await SubTask.findByIdAndUpdate(
+      SubtaskId,
+      {
+        name: subTaskName,
+        assigned_userid: user,
+        priority,
+        start_date: startDate,
+        end_date: updatedEndDate,
+        cost: updatedCost,  // Use the updated cost array
+        status,
+        checklist,
+        $push: { updateHistory: { $each: updateHistory } },
+      },
+      { new: true }
+    );
 
     if (!subtaskuser) {
       return res.status(404).json({
         success: false,
-        message: 'Subtaskuser not found err in updtae'
+        message: 'Subtaskuser not found err in update',
+        data: subtaskuser,
       });
     }
 
     return res.status(200).json({
       success: true,
       message: 'Subtask updated successfully',
-      data: subtaskuser
+      data: subtaskuser,
     });
-
-
-  }
-  catch(error){
-    console.log(error)
+  } catch (error) {
+    console.log(error);
     return res.status(500).json({
-      success:false,
-      message:"Error to update subtask",
-      Error:error,
-    })
-
+      success: false,
+      message: "Error updating subtask",
+      error: error,
+    });
   }
-}
+};
+
+
 
 
 module.exports.HandleSubtaskDelete = async (req, res) => {

@@ -1,26 +1,19 @@
 const { default: mongoose } = require("mongoose");
+const User = require('../Modal/User')
 
-// const [formData, setFormData] = useState({
-//     company_name: editingCompany?.company_name || "",
-//     client_name: editingCompany?.client_name || "",
-//     email: editingCompany?.email || "",
-//     joinDate: editingCompany?.joinDate || "",
-//     validity:editingCompany?.validity ||"",
-//     cost:editingCompany?.cost||"",
-//     location: editingCompany?.location || [
-//       {
-//         country: defaultCountry,
-//         state: "",
-//         cities: [],
-//       },
-//     ],
-//   });
+
 
 
 const CompanySchema=new mongoose.Schema({
     company_name:{
         type:String,
         required:true,
+    },
+
+    userId:{
+        type:mongoose.Schema.Types.ObjectId,
+        ref:'User'
+
     },
 
     client_name:{
@@ -42,6 +35,7 @@ const CompanySchema=new mongoose.Schema({
         type:Date,
         required:true,
     },
+    
 
     cost:{
         type:Number,
