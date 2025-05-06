@@ -6,6 +6,8 @@ const SubTaskController=require('../Controler/SubTask_Controller/SubTaskControll
 
 router.post('/createSubtask',isAuthenticated,SubTaskController.HandleSubTaskCreation);
 router.get('/getSubtask',SubTaskController.HandleSubTaskGet);
+
+// route to  update the subtask data and keep logs
 router.put('/Subtask/:SubtaskId', isAuthenticated ,SubTaskController.HnadleEditSubTask);
 router.delete('/Subtask/:SubtaskId',SubTaskController.HandleSubtaskDelete);
 
