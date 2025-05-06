@@ -13,6 +13,8 @@ router.use('/task' , require('./task_route'));
 
 router.use('/subtask',require('./subtask_route'));
 
+router.use('/company',require('./company_route'));
+
  module.exports = router; 
 
 

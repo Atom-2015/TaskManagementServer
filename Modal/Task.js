@@ -133,6 +133,9 @@ const TaskSchema = new mongoose.Schema({
     default: false
   },
 
+  end_date:{
+    type: String,
+  },
   //reminder task
   reminder: {
     type: Map,

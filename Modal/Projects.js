@@ -1,8 +1,10 @@
 const { default: mongoose } = require("mongoose");
+const Company=require("../Modal/Conpany");
 
 const ProjectSchema = new mongoose.Schema({
 
   name: { type: String, required: true },
+  Company:{type:mongoose.Schema.Types.ObjectId,ref:'Company'},
   description: { type: String },
   start_date: { type: Date,   },
   end_date: { type: Date },
