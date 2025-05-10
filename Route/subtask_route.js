@@ -11,4 +11,7 @@ router.get('/getSubtask',SubTaskController.HandleSubTaskGet);
 router.put('/Subtask/:SubtaskId', isAuthenticated ,SubTaskController.HnadleEditSubTask);
 router.delete('/Subtask/:SubtaskId',SubTaskController.HandleSubtaskDelete);
 
+//route to order and reorder Subtask data
+router.post('/reorder',SubTaskController.HandleOrderSubtasks);
+
 module.exports=router

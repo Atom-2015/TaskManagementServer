@@ -2,6 +2,89 @@
 const Task = require('../../Modal/Task');
 const SubTask = require('../../Modal/SubTask');
 
+// module.exports.HandleSubTaskCreation = async (req, res) => {
+//   try {
+//     const {
+//       name,
+//       assigned_userid,
+//       priority,
+//       start_date,
+//       end_date,
+//       cost,
+//       status,
+//       checklist
+//     } = req.body;
+
+
+
+
+//     const task_id = req.headers['x-task-id'];
+
+
+//     console.log(`this is response ${JSON.stringify(req.body)}`)
+
+
+   
+
+//     const task = await SubTask.find({ task_id: task_id });
+//     if (!task) {
+
+//       const subtask = await SubTask.create({
+//         name,
+
+//         assigned_userid,
+//         task_id,
+//         priority,
+//         start_date,
+//         end_date,
+//         cost,
+//         status,
+//         checklist,
+//         position:  newPosition
+//       })
+
+//       // if(!subtask){
+//       //   return res.status(500).json({ message: "Failed to create subtask" });
+//       // }
+//       return res.status(201).json({ success: true, data: subtask });
+
+//     }
+
+//     const newSubTask = await SubTask.create({
+//       name,
+//       assigned_userid,
+//       priority,
+//       start_date,
+//       task_id,
+//       end_date,
+//       cost,
+//       status,
+//       checklist
+//     });
+
+
+
+
+//     if (!newSubTask) {
+//       return res.status(500).json({ message: "Failed to create subtask" });
+//     }
+
+//     return res.status(201).json({
+//       message: "Subtask created successfully",
+//       status: true,
+//       data: newSubTask
+
+//     });
+
+//   } catch (error) {
+//     console.error(error);
+//     return res.status(500).json({
+//       message: "Internal Server Error",
+//       status: false
+//     });
+//   }
+// };
+
 module.exports.HandleSubTaskCreation = async (req, res) => {
   try {
     const {
@@ -15,74 +98,47 @@ module.exports.HandleSubTaskCreation = async (req, res) => {
       checklist
     } = req.body;
 
-
-
-
     const task_id = req.headers['x-task-id'];
-
-
-    console.log(`this is response ${JSON.stringify(req.body)}`)
-
-
-
-
-    const task = await SubTask.find({ task_id: task_id });
-    if (!task) {
-
-      const subtask = await SubTask.create({
-        name,
-
-        assigned_userid,
-        task_id,
-        priority,
-        start_date,
-        end_date,
-        cost,
-        status,
-        checklist
-      })
-
-      // if(!subtask){
-      //   return res.status(500).json({ message: "Failed to create subtask" });
-      // }
-      return res.status(201).json({ success: true, data: subtask });
-
+    if (!task_id) {
+      return res.status(400).json({ message: "Task ID is required in headers", status: false });
     }
 
+    console.log(`Received subtask data: ${JSON.stringify(req.body)}`);
+
+    // Get last subtask with the highest position for this task
+    const lastSubtask = await SubTask.findOne({ task_id }).sort({ position: -1 });
+    const newPosition = lastSubtask ? lastSubtask.position + 1 : 0;
+
+    // Always create the new subtask with calculated position
     const newSubTask = await SubTask.create({
       name,
       assigned_userid,
       priority,
       start_date,
-      task_id,
       end_date,
       cost,
       status,
-      checklist
+      checklist,
+      task_id,
+      position: newPosition
     });
 
-
-
-
-    if (!newSubTask) {
-      return res.status(500).json({ message: "Failed to create subtask" });
-    }
-
     return res.status(201).json({
+      success: true,
       message: "Subtask created successfully",
-      status: true,
       data: newSubTask
-
     });
 
   } catch (error) {
-    console.error(error);
+    console.error("Subtask creation error:", error);
     return res.status(500).json({
+      success: false,
       message: "Internal Server Error",
-      status: false
+      error: error.message
     });
   }
 };
+
 
 
 
@@ -265,6 +321,89 @@ module.exports.HandleSubtaskDelete = async (req, res) => {
       success: false,
       message: 'Failed to delete subtask',
       error: error.message
+    });
+  }
+};
+
+// order arrange karne ka api
+// module.exports.HandleOrderSubtasks = async (req, res) => {
+//   try {
+//     const { orderedSubtaskIds } = req.body;
+    
+//     if (!Array.isArray(orderedSubtaskIds)) {
+//       return res.status(400).json({
+//         success: false,
+//         message: "orderedSubtaskIds must be an array",
+//       });
+//     }
+
+//     // Create bulk operations
+//     const bulkOps = orderedSubtaskIds.map(({ id, order }) => ({
+//       updateOne: {
+//         filter: { _id: id },
+//         update: { $set: { position: order } },
+//       },
+//     }));
+
+//     // Execute bulk write
+//     const result = await SubTask.bulkWrite(bulkOps);
+
+//     return res.status(200).json({
+//       success: true,
+//       message: "Subtasks reordered successfully",
+//       data: result
+//     });
+//   } catch (error) {
+//     console.error("Reordering error:", error);
+//     return res.status(500).json({
+//       success: false,
+//       message: "Failed to reorder subtasks",
+//       error: error.message,
+//     });
+//   }
+// };
+
+module.exports.HandleOrderSubtasks = async (req, res) => {
+  try {
+    const { orderedSubtaskIds } = req.body;
+
+    if (!Array.isArray(orderedSubtaskIds)) {
+      return res.status(400).json({
+        success: false,
+        message: "orderedSubtaskIds must be an array",
+      });
+    }
+
+    // Recalculate positions after the drag-and-drop
+    let position = 0;
+    const updatedSubtasks = [];
+
+    // Loop through each subtask in the new order and update its position
+    for (let i = 0; i < orderedSubtaskIds.length; i++) {
+      const { id } = orderedSubtaskIds[i];
+      
+      // Update each subtask's position
+      const updatedSubtask = await SubTask.findByIdAndUpdate(
+        id,
+        { position: position++ },  // Increment position
+        { new: true }
+      );
+
+      updatedSubtasks.push(updatedSubtask);
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Subtasks reordered successfully",
+      data: updatedSubtasks
+    });
+
+  } catch (error) {
+    console.error("Reordering error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to reorder subtasks",
+      error: error.message,
     });
   }
 };
