@@ -11,4 +11,12 @@ router.delete("/:expenseId",ExpenseController.HandleDeleteExpense);
 
 router.put('/:expenseId',ExpenseController.HandleEditExpense);
 
+
+
+
+
+
+// ******************************************************************************************************* Expence Discussion ********************************************************************************************************* //
+router.post('/AddexpenseDiscussion',ExpenseController.HandleAddExpenceDiscussion);
+
 module.exports = router;
