@@ -32,7 +32,7 @@ const UserSchema = new mongoose.Schema({
     default:'Active'
   },
   role: { type: String, enum: ['Employee', 'Manager', 'Admin'],   default:'Employee' },
-  profile_image: { type: String }
+  profile_image: { type: String, default:null }
 });
 
 // module.exports = mongoose.model('User', UserSchema);
