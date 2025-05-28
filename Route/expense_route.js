@@ -19,4 +19,8 @@ router.put('/:expenseId',ExpenseController.HandleEditExpense);
 // ******************************************************************************************************* Expence Discussion ********************************************************************************************************* //
 router.post('/AddexpenseDiscussion',ExpenseController.HandleAddExpenceDiscussion);
 
+
+// get all expense discussion
+router.get('/AllexpenseDiscussion',ExpenseController.HandleGetExpenseDiscussion);
+
 module.exports = router;
