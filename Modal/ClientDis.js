@@ -16,8 +16,8 @@ const ClentDisSchema =new mongoose.Schema({
     },
 
     discussed_by:{
-        type:mongoose.Schema.Types.ObjectId,
-        ref:"User",
+       type:String,
+       required:true,
         
     },
 
@@ -30,7 +30,7 @@ const ClentDisSchema =new mongoose.Schema({
         required:true
     },
     next_update:{
-        type:String,
+        type:Date,
         required:true,
     }
 })

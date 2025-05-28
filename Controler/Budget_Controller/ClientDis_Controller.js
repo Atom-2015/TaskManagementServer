@@ -1,6 +1,11 @@
 const Project = require("../../Modal/Projects");
 const User = require("../../Modal/ClientDis");
 const ClientDis = require ("../../Modal/ClientDis");
+//
+
+
+
+
 
 module.exports.HandleClientDis = async(req,res)=>{
     try{
@@ -44,41 +49,45 @@ module.exports.HandleClientDis = async(req,res)=>{
 
 
 //edit api in client discusstion
-module.exports.HandleEditClientDis = async(req,res) =>{
-    try{
-        const {clientId} = req.params;
+module.exports.HandleEditClientDis = async (req, res) => {
+    try {
+        const { clientId } = req.params;
+        const { client_name, discussed_by, phone_no, comment, next_update } = req.body;
 
-        const {client_name,discussed_by,phone_no,comment,next_update} = req.body;
-
-        if(!clientId) {
+        if (!clientId) {
             return res.status(400).json({
-                success:false,
-                message:"ClientId not found"
-            })
+                success: false,
+                message: "Client ID is required"
+            });
         }
 
-        const editClientDis = await ClientDis.findByIdAndUpdate(clientId,{client_name,discussed_by,phone_no,comment,next_update},{new:true});
-        if(!editClientDis) {
+        const updatedClient = await ClientDis.findByIdAndUpdate(
+            clientId,
+            { client_name, discussed_by, phone_no, comment, next_update },
+            { new: true }
+        );
+
+        if (!updatedClient) {
             return res.status(404).json({
-                success:false,
-                message:"edit clent is problem"
-            })
+                success: false,
+                message: "Client discussion not found"
+            });
         }
 
         return res.status(200).json({
             success: true,
-            message:"edit Successfully",
-            data:editClientDis
-        })
-
-     }
-    catch(error){
+            message: "Client discussion updated successfully",
+            data: updatedClient
+        });
+    } catch (error) {
+        console.error("Edit Client Error:", error.message);
         return res.status(500).json({
-            success:false,
-            message:"Error in Edit Client"
-        })
+            success: false,
+            message: "Internal Server Error while editing client discussion"
+        });
     }
-}
+};
+
 
 //deleteAPi
 module.exports.handleDeleteClientDis = async (req,res) =>{
@@ -113,7 +122,7 @@ module.exports.handleGetClientDis = async (req,res) =>{
         const AllClientDis = await ClientDis.find();
 
         if(!AllClientDis) {
-            return res.status(400).json({
+            return res.status(400).json({ 
                 success:false,
                 message:"Error in get Data"
             })
