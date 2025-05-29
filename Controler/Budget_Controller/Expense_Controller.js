@@ -183,7 +183,7 @@ const ExpenseDiscussion = require('../../Modal/expencesDiscussion'); // Adjust t
 
 module.exports.HandleAddExpenceDiscussion = async (req, res) => {
   try {
-    const { clientName, discussedBy, pending, comment, nextFollowUp } = req.body;
+    const {date, clientName, discussedBy, pending, comment, nextFollowUp } = req.body;
     const projectId = req.headers['x-project-id'];
 
     // Manual validation
@@ -218,6 +218,7 @@ module.exports.HandleAddExpenceDiscussion = async (req, res) => {
     // Save to DB
     const newDiscussion = new ExpenseDiscussion({
       projectId,
+      date,
       clientName,
       discussedBy,
       pending,
@@ -339,7 +340,7 @@ module.exports.HandleEditExpenseDiscussion = async (req, res) => {
     }
 
     // Validate body fields
-    const { clientName, discussedBy, pending, comment, nextFollowUp } = req.body;
+    const { date,clientName, discussedBy, pending, comment, nextFollowUp } = req.body;
 
     if (
       !clientName || typeof clientName !== 'string' || clientName.trim() === '' ||
@@ -358,6 +359,7 @@ module.exports.HandleEditExpenseDiscussion = async (req, res) => {
     const updatedDiscussion = await ExpenseDiscussion.findByIdAndUpdate(
       discussionId.trim(),
       {
+        date,
         clientName: clientName.trim(),
         discussedBy: discussedBy.trim(),
         pending,

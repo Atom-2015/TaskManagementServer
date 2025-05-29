@@ -10,6 +10,10 @@ const ExpenceDiscussionSchema = new mongoose.Schema({
         type: String,
         required: true
     },
+    date:{
+        type: String,
+        required:true,
+    },
     discussedBy: {
         type: String,
         required: true
