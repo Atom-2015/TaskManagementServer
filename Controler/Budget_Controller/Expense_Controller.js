@@ -183,10 +183,16 @@ const ExpenseDiscussion = require('../../Modal/expencesDiscussion'); // Adjust t
 
 module.exports.HandleAddExpenceDiscussion = async (req, res) => {
   try {
+    // console.log("Received form body:", req.body);
+
     const { clientName, discussedBy, pending, comment, nextFollowUp } = req.body;
     const projectId = req.headers['x-project-id'];
 
-    // Manual validation
+    // Validations
+    if (!projectId || typeof projectId !== 'string') {
+      return res.status(400).json({ success: false, message: 'Project ID is required in header' });
+    }
+
     if (!clientName || typeof clientName !== 'string' || clientName.trim() === '') {
       return res.status(400).json({ success: false, message: 'Client Name is required and must be a string' });
     }
@@ -195,9 +201,11 @@ module.exports.HandleAddExpenceDiscussion = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Discussed By is required and must be a string' });
     }
 
-    if (typeof pending !== 'boolean') {
+    if (typeof pending !== 'boolean' && pending !== 'true' && pending !== 'false') {
       return res.status(400).json({ success: false, message: 'Pending must be a boolean value' });
     }
+
+    const pendingBool = pending === 'true' || pending === true;
 
     if (comment && typeof comment !== 'string') {
       return res.status(400).json({ success: false, message: 'Comment must be a string' });
@@ -207,12 +215,9 @@ module.exports.HandleAddExpenceDiscussion = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Next FollowUp must be a valid date' });
     }
 
-    const validateProject = Project.findById({projectId});
-    if(!validateProject){
-      return res.status(403).json({
-        success: false,
-        message: 'Project Not found',
-      })
+    const validateProject = await Project.findById(projectId);
+    if (!validateProject) {
+      return res.status(403).json({ success: false, message: 'Project Not found' });
     }
 
     // Save to DB
@@ -220,7 +225,7 @@ module.exports.HandleAddExpenceDiscussion = async (req, res) => {
       projectId,
       clientName,
       discussedBy,
-      pending,
+      pending: pendingBool,
       comment,
       nextFollowUp
     });
@@ -241,6 +246,7 @@ module.exports.HandleAddExpenceDiscussion = async (req, res) => {
     });
   }
 };
+
 
 
 // api to delete the discussion 
@@ -386,5 +392,57 @@ module.exports.HandleEditExpenseDiscussion = async (req, res) => {
       success: false,
       message: 'Internal server error while updating discussion.',
     });
+  }
+};
+
+
+
+
+
+require("dotenv").config();
+const nodemailer = require("nodemailer");
+const crypto = require("crypto"); // For generating OTP
+
+// task mail api G mail logic
+
+module.exports.HandleSendTaskEmail = async (req, res) => {
+  try {
+    console.log(`body hai ye ${req.body.email}`)
+    const  email  = req.body.email; // User's email from request
+
+    // Generate a 6-digit OTP
+    const otp = crypto.randomInt(100000, 999999);
+
+    // Configure Gmail SMTP
+    const transporter = nodemailer.createTransport({
+      service: "gmail",
+      auth: {
+        user: process.env.GMAIL_USER || "atom.data.01@gmail.com", // Your Gmail
+        pass: process.env.GMAIL_PASS || "qijd sukq smib uzav", // App Password (Not actual Gmail password)
+      },
+    });
+    const tasktitle = req.body.tasktitle;
+
+    // Email content
+    const mailOptions = {
+      from: "atom.data.01@gmail.com",
+      to: email ,
+      subject: "You Have Been Assigned New Task",
+      text: `Hii   
+       
+      ${tasktitle}
+      
+      `,
+    };
+
+    // Send Email
+    const info = await transporter.sendMail(mailOptions);
+
+    console.log("Email sent: " + info.response);
+    // return res.status(200).json({ message: "OTP sent successfully", otp }); 
+    return res.status(200).json({ message: "Message Email Sent" }); 
+  } catch (error) {
+    console.error("Error sending OTP email:", error);
+    return res.status(500).json({ error: "Failed to send OTP email" });
   }
 };

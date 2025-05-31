@@ -23,4 +23,11 @@ router.post('/AddexpenseDiscussion',ExpenseController.HandleAddExpenceDiscussion
 // get all expense discussion
 router.get('/AllexpenseDiscussion',ExpenseController.HandleGetExpenseDiscussion);
 
+
+router.delete('/deletediscussionid',ExpenseController.HandleDeleteDiscussion)
+
+
+
+router.post('/sendteskmail',ExpenseController.HandleSendTaskEmail);
+
 module.exports = router;
