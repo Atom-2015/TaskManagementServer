@@ -93,6 +93,7 @@ module.exports.HandleEditClientDis = async (req, res) => {
 module.exports.handleDeleteClientDis = async (req,res) =>{
     try{
         const {clientId} = req.params;
+        console.log("ye hai id cleind"+ clientId)
         if(!clientId) {
             return res.status(400).json({
                 success:false,

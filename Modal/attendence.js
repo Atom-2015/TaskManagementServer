@@ -2,7 +2,7 @@ const { default: mongoose } = require("mongoose");
 
 const AttendanceSchema = new mongoose.Schema({
 
-  employee_id: {
+  userId: {
     type: mongoose.Schema.Types.ObjectId, required: true, ref: 'User'
 
   }, // Reference to Users
@@ -10,7 +10,7 @@ const AttendanceSchema = new mongoose.Schema({
   check_in_time: { type: String },
   check_out_time: { type: String },
   status: { type: String, enum: ['Present', 'Absent', 'On Leave'], required: true },
-  location: { type: String },
+  
   remarks: { type: String }
 });
 

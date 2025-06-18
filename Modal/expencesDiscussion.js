@@ -1,18 +1,19 @@
 const mongoose = require('mongoose');
+const Project = require("../Modal/Projects");
 
-const ExpenceDiscussionSchema = new mongoose.Schema({
+const ExpenseDiscussionSchema = new mongoose.Schema({
     projectId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "Project",
-        required: true,
+        
     },
     clientName: {
         type: String,
         required: true
     },
     date:{
-        type: String,
-        required:true,
+        type: Date,
+        
     },
     discussedBy: {
         type: String,
@@ -31,5 +32,5 @@ const ExpenceDiscussionSchema = new mongoose.Schema({
 });
 
 // module.exports = mongoose.model('e', expenceDiscussion);
-const ExpenseDiscussion = mongoose.model('ExpenseDiscussion', ExpenceDiscussionSchema);
+const ExpenseDiscussion = mongoose.model('ExpenseDiscussion', ExpenseDiscussionSchema);
 module.exports = ExpenseDiscussion;

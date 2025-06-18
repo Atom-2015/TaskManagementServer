@@ -69,10 +69,10 @@ module.exports.HandleAddUser = async (req, res) => {
     // Upload image if present
     let imageUrl = null;
     if (req.file) {
-      console.log("Uploading image to Cloudinary...");
+    
       const result = await UploadCloudinary(req.file.buffer);
       imageUrl = result.secure_url;
-      console.log("Image uploaded:", imageUrl);
+     
     }
 
     // Create the user
@@ -93,7 +93,7 @@ module.exports.HandleAddUser = async (req, res) => {
       profile_image: imageUrl,
     });
 
-    console.log("✅ User created successfully:", newUser._id);
+    
     return res.status(201).json({
       message: "User created successfully",
       user: newUser,

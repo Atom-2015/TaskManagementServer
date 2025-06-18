@@ -17,10 +17,12 @@ router.put('/:expenseId',ExpenseController.HandleEditExpense);
 
 
 // ******************************************************************************************************* Expence Discussion ********************************************************************************************************* //
-router.post('/AddexpenseDiscussion',ExpenseController.HandleAddExpenceDiscussion);
+// router.post('/AddexpenseDiscussion',ExpenseController.HandleAddExpenceDiscussion);
 
 
-// get all expense discussion
-router.get('/AllexpenseDiscussion',ExpenseController.HandleGetExpenseDiscussion);
+// router.put('/:discussionId',ExpenseController.HandleEditExpenseDiscussion);
+
+// // get all expense discussion
+// router.get('/AllexpenseDiscussion',ExpenseController.HandleGetExpenseDiscussion);
 
 module.exports = router; 
