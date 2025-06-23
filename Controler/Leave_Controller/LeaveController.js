@@ -2,8 +2,6 @@ const User = require("../../Modal/User");
 const LeavePolicy = require("../../Modal/leavefolder/leavepolicy");
 const UserLeave = require("../../Modal/leavefolder/userleaves");
 
-
-
 // leave Policy for company ok bro||||||||||||||
 // Add Leave Policy
 module.exports.HandleAddLeavePolicy = async (req, res) => {
@@ -48,43 +46,43 @@ module.exports.HandleAddLeavePolicy = async (req, res) => {
 };
 
 //update companyt policy by dhinchak pooja
-module.exports.updateLeavePolicy = async(req,res) => {
+module.exports.updateLeavePolicy = async (req, res) => {
+  try {
+    const { companyId, leaves } = req.body;
 
-  try{
-    const {companyId, leaves} = req.body;
- 
-    if(!companyId || !Array.isArray(leaves) || leaves.length === 0){
+    if (!companyId || !Array.isArray(leaves) || leaves.length === 0) {
       return res.status(400).json({
-        success:false,
-        message:"Leave and  companyId  are required"
-      })
+        success: false,
+        message: "Leave and  companyId  are required",
+      });
     }
 
-    const updatedd = await LeavePolicy.findOneAndUpdate({companyId},{$set:{leaves}},{new: true,upsert:false});
+    const updatedd = await LeavePolicy.findOneAndUpdate(
+      { companyId },
+      { $set: { leaves } },
+      { new: true, upsert: false }
+    );
 
-    if(!updatedd) {
+    if (!updatedd) {
       return res.status(400).json({
-        success:false,
-        message:"leave policey not found and update"
-      })
+        success: false,
+        message: "leave policey not found and update",
+      });
     }
 
     return res.status(200).json({
-      success:false,
-      message:"leave polsicy updated Successfully",
-      data: updatedd
-    })
-    
-  }
-  catch(error){
-    console.log( "ye ha upfate by company",error);
+      success: false,
+      message: "leave polsicy updated Successfully",
+      data: updatedd,
+    });
+  } catch (error) {
+    console.log("ye ha update by company", error);
     return res.status(500).json({
       success: false,
-      message:"error in update leave policey very well"
-    })
+      message: "error in update leave policey very well",
+    });
   }
-}
-
+};
 
 // Get Leave Policy by Company ID
 module.exports.HandleGetLeavePolicy = async (req, res) => {
@@ -122,19 +120,28 @@ module.exports.HandleGetLeavePolicy = async (req, res) => {
 
 /**************************LEAVE API FOR ALL User******************************/
 
-
-
-
 module.exports.createOrUpdateUserLeave = async (req, res) => {
   try {
-    const { userId, companyId, year, leaveType, fromDate, toDate } = req.body;
+    const userId = req.user?.userid; // ✅ Extract from token
+    const { leaveType, fromDate, toDate, reason, year } = req.body;
 
-    if (!userId || !companyId || !leaveType || !fromDate || !toDate) {
+    if (!userId || !leaveType || !fromDate || !toDate || !reason) {
       return res.status(400).json({
         success: false,
-        message: "Required: userId, companyId, leaveType, fromDate, and toDate",
+        message:
+          "Required: userId (from token), leaveType, fromDate, toDate, and reason",
       });
     }
+
+    const user = await User.findById(userId).lean();
+    if (!user || !user.Company) {
+      return res.status(404).json({
+        success: false,
+        message: "User or associated company not found",
+      });
+    }
+
+    const companyId = user.Company.toString();
 
     const start = new Date(fromDate);
     const end = new Date(toDate);
@@ -147,11 +154,10 @@ module.exports.createOrUpdateUserLeave = async (req, res) => {
     }
 
     const days = Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1;
-
     const targetYear = year || new Date().getFullYear();
     const leaveTypeUpper = leaveType.toUpperCase();
 
-    const policy = await LeavePolicy.findOne({ companyId });
+    const policy = await LeavePolicy.findOne({ companyId }).lean();
     if (!policy) {
       return res.status(404).json({
         success: false,
@@ -159,7 +165,7 @@ module.exports.createOrUpdateUserLeave = async (req, res) => {
       });
     }
 
-    const policyEntry = policy.leaves.find(l => l.type === leaveTypeUpper);
+    const policyEntry = policy.leaves.find((l) => l.type === leaveTypeUpper);
     if (!policyEntry) {
       return res.status(404).json({
         success: false,
@@ -167,40 +173,68 @@ module.exports.createOrUpdateUserLeave = async (req, res) => {
       });
     }
 
-    let userLeave = await UserLeave.findOne({ userId, companyId, year: targetYear });
-    let currentUsed = 0;
+    let userLeave = await UserLeave.findOne({
+      userId,
+      companyId,
+      year: targetYear,
+    });
 
+    let currentUsed = 0;
     if (userLeave) {
-      const existing = userLeave.leavesTaken.filter(l => l.type === leaveTypeUpper);
+      // Auto-fill missing reasons in old records
+      userLeave.leavesTaken = userLeave.leavesTaken.map((entry) => ({
+        ...entry,
+        reason: entry.reason || "Auto-filled",
+      }));
+
+      const existing = userLeave.leavesTaken.filter(
+        (l) => l.type === leaveTypeUpper && l.status === "Approved"
+      );
       currentUsed = existing.reduce((sum, l) => sum + l.days, 0);
     }
 
-    const newTotal = currentUsed + days;
-    if (newTotal > policyEntry.days) {
-      return res.status(400).json({
-        success: false,
-        message: `Insufficient balance. Allowed: ${policyEntry.days}, Used: ${currentUsed}, Requested: ${days}`,
-      });
-    }
+const newTotal = currentUsed + days;
+let infoMessage = "Leave applied successfully";
+
+if (newTotal > policyEntry.days) {
+  const available = policyEntry.days - currentUsed;
+  if (available > 0) {
+    infoMessage = `Partial balance available. Requested: ${days}, Available: ${available}. Remaining ${
+      days - available
+    } will be adjusted as UNPAID leave upon approval.`;
+  } else {
+    infoMessage = `No balance left for ${leaveTypeUpper}. Entire ${days} days will be marked as UNPAID leave upon approval.`;
+  }
+}
+
+
+    const leaveEntry = {
+      type: leaveTypeUpper,
+      reason,
+      days,
+      fromDate: start,
+      toDate: end,
+      status: "Pending",
+    };
 
     if (!userLeave) {
       userLeave = new UserLeave({
         userId,
         companyId,
         year: targetYear,
-        leavesTaken: [{ type: leaveTypeUpper, days, fromDate: start, toDate: end }],
+        leavesTaken: [leaveEntry],
       });
     } else {
-      userLeave.leavesTaken.push({ type: leaveTypeUpper, days, fromDate: start, toDate: end });
+      userLeave.leavesTaken.push(leaveEntry);
     }
 
     const saved = await userLeave.save();
+
     return res.status(200).json({
       success: true,
       message: "Leave applied successfully",
       data: saved,
     });
-
   } catch (error) {
     console.error("Error applying leave:", error);
     return res.status(500).json({
@@ -210,105 +244,119 @@ module.exports.createOrUpdateUserLeave = async (req, res) => {
   }
 };
 
-
-
 module.exports.getUserLeave = async (req, res) => {
   try {
-    const { userId, companyId, year } = req.query;
+    const userId = req.user.userid;
+    const user = await User.findById(userId).lean();
 
-    if (!userId || !companyId) {
-      return res.status(400).json({
+    if (!user || !user.Company) {
+      return res(404).json({
         success: false,
-        message: "userId and company is not found",
+        message: "User or assscoicrted",
       });
     }
 
-    const targetYear = year || new Date().getFullYear();
+    const companyId = user.Company.toString();
 
-    const userLeave = await UserLeave.findOne({
+    const targetYear = req.query.year || new Date().getFullYear();
+
+    const userleave = await UserLeave.findOne({
       userId,
       companyId,
       year: targetYear,
     });
 
-    if (!userLeave) {
+    if (!userleave) {
       return res.status(404).json({
         success: false,
-        message: "No leave record found in this user ",
+        message: "No leave record found",
       });
     }
 
     return res.status(200).json({
       success: true,
-      message: "User leave record fetch successfully",
-      data: userLeave,
+      message: "User leave record successfully",
+      data: userleave,
     });
   } catch (error) {
-    console.log("Error in fetching the user leave", error);
+    console.log("error in fetchong ", error);
     return res.status(500).json({
       success: false,
-      message: "error getting the time",
+      message: "error in fetching leave user",
     });
   }
 };
 
+module.exports.getUserLeaveBalance = async (req, res) => {
+  try {
+    const userId = req.user?.userid; // from token
+    const year = new Date().getFullYear(); // or req.query.year if dynamic
 
-//get leave balacne by user for balance
-module.exports.getUserLeaveBalance=async (req,res) =>{
-  try{
-    let {userId,companyId,year} =req.query;
-
-    if(!userId || !companyId){
+    if (!userId) {
       return res.status(400).json({
-        success:false,
-        message:"userid and comnapyid required"
-      })
+        success: false,
+        message: "User ID is missing from token",
+      });
     }
 
-     userId= userId.trim();
-      companyId= companyId.trim();
+    // Fetch user to get companyId
+    const user = await User.findById(userId).lean();
+    if (!user || !user.Company) {
+      return res.status(404).json({
+        success: false,
+        message: "User or associated company not found",
+      });
+    }
 
-      const targetYear= year || new Date().getFullYear();
+    const companyId = user.Company.toString();
 
-      const policy = await LeavePolicy.findOne({companyId})
-      if(!policy){
-        return res.status(404).json({
-          success:false,
-          message:"pilocy not found"
-        })
-      }
+    // Fetch leave policy for this company
+    const policy = await LeavePolicy.findOne({ companyId }).lean();
+    if (!policy) {
+      return res.status(404).json({
+        success: false,
+        message: "Leave policy not found for this company",
+      });
+    }
 
-      const userleave = await UserLeave.findOne({userId,companyId,year:targetYear});
+    // Fetch user's leave record for the current year
+    const userLeave = await UserLeave.findOne({
+      userId,
+      companyId,
+      year,
+    }).lean();
 
-      const summary={};
+    // Build summary
+    const summary = {};
+    for (const leaveType of policy.leaves) {
+      const type = leaveType.type.toUpperCase();
+      const allowed = leaveType.days;
 
-      for(const leavetype of policy.leaves){
-        const type= leavetype.type.toUpperCase();
-        const allowed = leavetype.days;
+      const used =
+        userLeave?.leavesTaken
+          ?.filter((l) => l.type === type && l.status === "Approved") // ✅ Only approved counted
+          ?.reduce((acc, l) => acc + l.days, 0) || 0;
 
-        const used = userleave?.leavesTaken.find(l=>l.type === type)?.days || 0;
-        const remaining = allowed-used;
+      summary[type] = {
+        allowed,
+        used,
+        remaining: allowed - used,
+      };
+    }
 
-        summary[type]= {
-          allowed,used,remaining,
-        }
-      }
-
-      return res.status(200).json({
-        success:true,
-        message:"Leave balance fetched successfully",
-        data: summary
-      })
-  }
-  catch(error){
+    return res.status(200).json({
+      success: true,
+      message: "Leave balance fetched successfully",
+      data: summary,
+    });
+  } catch (error) {
+    console.error("Error fetching leave balance:", error);
     return res.status(500).json({
-      success:false,
-      message:"error in user get leave balance"
-    })
+      success: false,
+      message: "Server error while fetching leave balance",
+    });
   }
-}
-
-
+};
 
 //get total leave summery by user in this field samjhe re bachwa
 module.exports.getUserLeaveSummary = async (req, res) => {
@@ -322,11 +370,15 @@ module.exports.getUserLeaveSummary = async (req, res) => {
       });
     }
 
-     userId = userId.trim();
+    userId = userId.trim();
     companyId = companyId.trim();
     const targetYear = year || new Date().getFullYear();
 
-    const leave = await UserLeave.findOne({ userId, companyId, year: targetYear });
+    const leave = await UserLeave.findOne({
+      userId,
+      companyId,
+      year: targetYear,
+    });
     const summary = {};
 
     if (leave) {
@@ -340,7 +392,6 @@ module.exports.getUserLeaveSummary = async (req, res) => {
       message: "User leave summary fetched successfully",
       data: summary,
     });
-
   } catch (error) {
     console.log("Error in getUserLeaveSummary:", error);
     return res.status(500).json({
@@ -350,16 +401,16 @@ module.exports.getUserLeaveSummary = async (req, res) => {
   }
 };
 
-
 /********************all leave by the company***********************/
-
 module.exports.getAllUserLeaveByCompany = async (req, res) => {
   try {
-    const { companyId, year } = req.query;
+    const companyId = req.user?.company_id; // ✅ Extract from token
+    const { year } = req.query;
+
     if (!companyId) {
       return res.status(400).json({
         success: false,
-        message: "companyId is required",
+        message: "Company ID missing from token. Unauthorized access.",
       });
     }
 
@@ -370,23 +421,149 @@ module.exports.getAllUserLeaveByCompany = async (req, res) => {
       year: targetYear,
     }).populate("userId", "name");
 
-    if (!leaves || leaves.length < 0) {
+    if (!leaves || leaves.length === 0) {
       return res.status(404).json({
         success: false,
-        message: "No leave record founds",
+        message: "No leave records found",
       });
     }
 
     return res.status(200).json({
       success: true,
-      message: "Company user all ",
+      message: "All user leaves fetched for this company",
       data: leaves,
     });
   } catch (error) {
-    console.log("ye error arha hai ", error);
+    console.log("Error in getAllUserLeaveByCompany:", error);
     return res.status(500).json({
       success: false,
-      message: "Server error in  fetching all user leaves",
+      message: "Server error while fetching user leaves",
     });
   }
 };
+
+/**********************updateleavebyuserbycompany***********************/
+
+module.exports.updateLeaveStatusByCompany = async (req, res) => {
+  try {
+    const { userId, leaveId, status } = req.body;
+    const companyId = req.user?.company_id;
+
+    if (!userId || !leaveId || !status) {
+      return res.status(400).json({
+        success: false,
+        message: "userId, leaveId, and status are required",
+      });
+    }
+
+    const validStatuses = ["approved", "rejected"];
+    const normalizedStatus = status.toLowerCase();
+    if (!validStatuses.includes(normalizedStatus)) {
+      return res.status(400).json({
+        success: false,
+        message: "Status must be either 'approved' or 'rejected'",
+      });
+    }
+
+    const formattedStatus =
+      normalizedStatus.charAt(0).toUpperCase() + normalizedStatus.slice(1);
+
+    const user = await User.findById(userId);
+    if (!user || user.Company.toString() !== companyId) {
+      return res.status(403).json({
+        success: false,
+        message: "Unauthorized",
+      });
+    }
+
+    const year = new Date().getFullYear();
+    const userLeave = await UserLeave.findOne({ companyId, userId, year });
+
+    if (!userLeave) {
+      return res.status(404).json({
+        success: false,
+        message: "Leave record not found",
+      });
+    }
+
+    const leaveEntry = userLeave.leavesTaken.id(leaveId);
+    if (!leaveEntry) {
+      return res.status(404).json({
+        success: false,
+        message: "Leave entry not found",
+      });
+    }
+
+    if (formattedStatus === "Approved") {
+      const policy = await LeavePolicy.findOne({ companyId }).lean();
+      if (!policy) {
+        return res.status(404).json({
+          success: false,
+          message: "Leave policy not found",
+        });
+      }
+
+      const requestedType = leaveEntry.type;
+      const requestedDays = leaveEntry.days;
+
+      const policyEntry = policy.leaves.find((l) => l.type === requestedType);
+      const unpaidPolicy = policy.leaves.find((l) => l.type === "UNPAID");
+
+      if (!policyEntry || !unpaidPolicy) {
+        return res.status(404).json({
+          success: false,
+          message: "Leave type or UNPAID leave not defined in policy",
+        });
+      }
+
+      const approvedLeaves = userLeave.leavesTaken.filter(
+        (l) => l.type === requestedType && l.status === "Approved"
+      );
+      const alreadyApproved = approvedLeaves.reduce((sum, l) => sum + l.days, 0);
+      const balance = policyEntry.days - alreadyApproved;
+
+      if (balance >= requestedDays) {
+        leaveEntry.status = "Approved";
+      } else if (balance > 0) {
+        leaveEntry.days = balance;
+        leaveEntry.status = "Approved";
+
+        const unpaidPart = {
+          type: "UNPAID",
+          reason: leaveEntry.reason + " (Auto-adjusted unpaid)",
+          fromDate: leaveEntry.toDate,
+          toDate: leaveEntry.toDate,
+          days: requestedDays - balance,
+          status: "Approved",
+        };
+
+        userLeave.leavesTaken.push(unpaidPart);
+      } else {
+        leaveEntry.type = "UNPAID";
+        leaveEntry.status = "Approved";
+      }
+    } else {
+      leaveEntry.status = formattedStatus;
+    }
+
+    userLeave.leavesTaken = userLeave.leavesTaken.map((entry) => ({
+      ...entry.toObject(),
+      reason: entry.reason || "Auto-filled by admin",
+    }));
+
+    await userLeave.save();
+
+    return res.status(200).json({
+      success: true,
+      message: `Leave ${formattedStatus.toLowerCase()} successfully`,
+      data: leaveEntry,
+    });
+  } catch (error) {
+    console.log("Error in updateLeaveStatusByCompany:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Server error while updating leave status",
+    });
+  }
+};
+

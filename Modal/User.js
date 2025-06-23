@@ -31,6 +31,7 @@ const UserSchema = new mongoose.Schema({
     enum: ['Active', 'Inactive'],
     default:'Active'
   },
+  date_of_joining:{type:Date, required:true},
   role: { type: String, enum: ['Employee', 'Manager', 'Admin'],   default:'Employee' },
   profile_image: { type: String, default:null }
 });

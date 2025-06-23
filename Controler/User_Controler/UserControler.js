@@ -129,6 +129,7 @@ module.exports.HandleSignin = async (req, res) => {
       const token = jwt.sign(
         {
           email: user.email,
+          userid:user._id,
           name: user.name,
           company_id: user.company_id,
         },
@@ -146,6 +147,7 @@ module.exports.HandleSignin = async (req, res) => {
     const token = jwt.sign(
       {
         email: company.email,
+        // userid:user._id || "Company",
         name: company.company_name,
         company_id: company._id,
       },
