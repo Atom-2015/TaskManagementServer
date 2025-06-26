@@ -69,10 +69,8 @@ module.exports.HandleAddUser = async (req, res) => {
     // Upload image if present
     let imageUrl = null;
     if (req.file) {
-    
       const result = await UploadCloudinary(req.file.buffer);
       imageUrl = result.secure_url;
-     
     }
 
     // Create the user
@@ -93,7 +91,6 @@ module.exports.HandleAddUser = async (req, res) => {
       profile_image: imageUrl,
     });
 
-    
     return res.status(201).json({
       message: "User created successfully",
       user: newUser,
@@ -129,7 +126,7 @@ module.exports.HandleSignin = async (req, res) => {
       const token = jwt.sign(
         {
           email: user.email,
-          userid:user._id,
+          userid: user._id,
           name: user.name,
           company_id: user.company_id,
         },
@@ -279,30 +276,29 @@ module.exports.HandleEditUser = async (req, res) => {
   }
 };
 
-module.exports.handleDeleteImageAllUser = async (req,res) => {
-  try{
-      const userId = req.params.id;
-      
-      if(!userId) {
-        return res.status(400).json({
-          success:false,
-          message:"User not found problem"
-        })
-      }
+module.exports.handleDeleteImageAllUser = async (req, res) => {
+  try {
+    const userId = req.params.id;
 
-      const user = await User.findById(userId);
-      if(!user) {
-        return res.status(404)
-      }
-  }
-  catch(error){
-    console.log(error)
+    if (!userId) {
+      return res.status(400).json({
+        success: false,
+        message: "User not found problem",
+      });
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404);
+    }
+  } catch (error) {
+    console.log(error);
     return res.status(500).json({
-        success:false,
-        message:"delete All User"
-    })
+      success: false,
+      message: "delete All User",
+    });
   }
-}
+};
 
 module.exports.HandleDeleteUser = async (req, res) => {
   try {

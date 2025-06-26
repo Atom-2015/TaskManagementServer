@@ -19,6 +19,9 @@ router.use("/client",require("./clientdis_route"));
 
 router.use("/leave",require("./leave_route"));
 
+//holiday
+router.use("/holiday",require("./holiday_route"))
+
 //revenue hai ye 
 router.use('/revenue' , require('./revenue_route'));
 
