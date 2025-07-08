@@ -250,7 +250,7 @@ module.exports.getUserLeave = async (req, res) => {
     const user = await User.findById(userId).lean();
 
     if (!user || !user.Company) {
-      return res(404).json({
+      return res.status(404).json({
         success: false,
         message: "User or assscoicrted",
       });
@@ -566,4 +566,3 @@ module.exports.updateLeaveStatusByCompany = async (req, res) => {
     });
   }
 };
-

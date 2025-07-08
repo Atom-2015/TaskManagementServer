@@ -2,13 +2,13 @@ const multer = require("multer");
 
 const storage = multer.memoryStorage();
 
-console.log(">>> Initializing multer..."); // This runs at server start
+
 
 // In your multer middleware (UserUploadImage.js)
 const upload = multer({
   storage,
   limits: { 
-    fileSize: 5 * 1024 * 1024, // 5MB
+    fileSize: 5 * 1024 * 1024, 
     files: 1 
   },
   fileFilter: (req, file, cb) => {

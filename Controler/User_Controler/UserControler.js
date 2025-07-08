@@ -14,6 +14,7 @@ module.exports.HandleAddUser = async (req, res) => {
     name,
     email,
     Company,
+    shiftId,
     password,
     phone,
     designation,
@@ -47,7 +48,13 @@ module.exports.HandleAddUser = async (req, res) => {
       message: "Company is required.",
     });
   }
-
+  
+  if(!shiftId?.trim()){
+    return res.status(400).json({
+      success:false,
+      message:"Shift is required",
+    })
+  }
   try {
     // const otpRecord = await OtpSchema.findOne({email, isVerified:true})
     // if(!otpRecord || new Date(otpRecord.expiresAt) < new Date()){
@@ -88,6 +95,7 @@ module.exports.HandleAddUser = async (req, res) => {
       salary,
       role,
       Company,
+      shiftId,
       profile_image: imageUrl,
     });
 
@@ -191,6 +199,7 @@ module.exports.HandleEditUser = async (req, res) => {
     name,
     email,
     Company,
+    shiftId,
     password,
     phone,
     designation,
@@ -230,6 +239,7 @@ module.exports.HandleEditUser = async (req, res) => {
     if (name) updateFields.name = name;
     if (email) updateFields.email = email;
     if (Company) updateFields.Company = Company;
+    if(shiftId) updateFields.shiftId=shiftId;
     if (password) updateFields.password = password;
     if (phone) updateFields.phone = phone;
     if (designation) updateFields.designation = designation;

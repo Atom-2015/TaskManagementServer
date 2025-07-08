@@ -12,6 +12,7 @@ router.get("/getHoliday",isAuthenticated,holidayController.HandleGetHolidayList)
 router.put("/editHoliday",isAuthenticated,holidayController.HandlePutHolidayByCompany);
 
 
+ 
 //router holiday editing
 router.put("/holiday/:holidayId",isAuthenticated,holidayController.HandleSingleHoliday);
 
@@ -27,6 +28,11 @@ router.delete("/del/:overridesId",isAuthenticated,holidayController.HandleDelSin
 //router add overrides 
 router.post("/addOverrides",isAuthenticated,holidayController.HandleAddOverridesHoliday);
 
+//router add single holiday
+router.post("/singleHolday",isAuthenticated,holidayController.HandCreateSingleHoliday)
+
+
 router.get("/overrides",isAuthenticated,holidayController.HandleGetOverrides);
+
 
 module.exports=router;

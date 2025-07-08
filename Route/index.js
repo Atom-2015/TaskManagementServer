@@ -25,6 +25,12 @@ router.use("/holiday",require("./holiday_route"))
 //revenue hai ye 
 router.use('/revenue' , require('./revenue_route'));
 
+//shift
+router.use("/shift",require('./shift_route'));
+
+//attendence
+ router.use("/attend",require('./attendence_route'))
+
  module.exports = router; 
 
 
