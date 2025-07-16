@@ -1,5 +1,6 @@
 const Holiday = require("../../Modal/Holiday");
 const Shift = require("../../Modal/Shift");
+const User = require("../../Modal/User");
 
 module.exports.createShift = async (req, res) => {
   try {
@@ -37,7 +38,25 @@ module.exports.createShift = async (req, res) => {
 
 module.exports.getShift = async (req, res) => {
   try {
-    const companyId = req.user?.company_id;
+
+    const userId=req.user?.userid;
+    if(!userId){
+      return res.status(400).json({
+        success:false,
+        message:"userId not found"
+      })
+    }
+
+    const user= await User.findById(userId).lean();
+    if(!user || !user.Company){
+      return res.status(404).json({
+        success:false,
+        message:"User or associated company not found"
+      })
+    }
+
+    const companyId=user.Company.toString();
+    //const companyId = req.user?.company_id;
     if (!companyId) {
       return res.status(400).json({
         success: false,

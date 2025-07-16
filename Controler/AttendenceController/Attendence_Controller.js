@@ -1,7 +1,7 @@
 const Attendance = require("../../Modal/attendence");
 const User = require("../../Modal/User");
 const Holiday = require("../../Modal/Holiday");
-const UserLeave = require("../../Modal/Leave");
+const UserLeave = require("../../Modal/leavefolder/userleaves");
 const Shift = require("../../Modal/Shift");
 const moment = require("moment");
 
@@ -84,25 +84,6 @@ module.exports.HandleCreateAttendance = async (req, res) => {
       );
     });
 
-    if (leaveType && ["CASUAL", "SICK", "UNPAID"].includes(leaveType.type)) {
-      const newAttendance = await Attendance.create({
-        userId,
-        shiftId: shiftObjectId || null,
-        date: currentDate,
-        check_in_time,
-        status: "OnLeave",
-        isLate: false,
-        lateByMinutes: 0,
-        remarks: `${leaveType.type} Leave`,
-      });
-
-      return res.status(200).json({
-        success: true,
-        message: "Attendance marked as OnLeave.",
-        data: newAttendance,
-      });
-    }
-
     let isHalfDayLeave = false;
     let halfDayLeaveRemark = "";
     if (leaveType && leaveType.type === "HALF" && selectedShift) {
@@ -113,7 +94,7 @@ module.exports.HandleCreateAttendance = async (req, res) => {
 
         if (checkInTime.isAfter(lunchEnd)) {
           isHalfDayLeave = true;
-          halfDayLeaveRemark = "Present after half-day leave";
+          halfDayLeaveRemark = "Present after half-day leave (override)";
         }
       }
     }
@@ -127,8 +108,6 @@ module.exports.HandleCreateAttendance = async (req, res) => {
       const checkInTime = moment(check_in_time, "HH:mm");
 
       lateByMinutes = checkInTime.diff(punchIn, "minutes");
-
-      // Apply grace period of 15 minutes
       isLate = lateByMinutes > 15;
       lateByMinutes = isLate ? lateByMinutes : 0;
 
@@ -149,13 +128,17 @@ module.exports.HandleCreateAttendance = async (req, res) => {
         : "Present",
       isLate: isHalfDayLeave ? false : isLate,
       lateByMinutes: isHalfDayLeave ? 0 : lateByMinutes,
-      remarks: isHalfDayLeave ? halfDayLeaveRemark : remarks,
+      remarks: isHalfDayLeave
+        ? halfDayLeaveRemark
+        : leaveType && ["CASUAL", "SICK", "UNPAID"].includes(leaveType.type)
+        ? `Override: Present on ${leaveType.type} Leave`
+        : remarks,
     });
 
     return res.status(200).json({
       success: true,
       message: isHalfDayLeave
-        ? "Attendance marked as HalfDay (half-day leave)"
+        ? "Attendance marked as HalfDay (half-day leave override)"
         : "Attendance marked successfully",
       data: newAttendance,
     });
@@ -256,6 +239,28 @@ module.exports.HandleCheckOutAttendance = async (req, res) => {
   }
 };
 
+const getApprovedLeaveDays = (leaveRecords = []) => {
+  const map = new Map();
+
+  for (const leave of leaveRecords) {
+    for (const entry of leave.leavesTaken) {
+      if (entry.status !== "Approved") continue;
+
+      const from = moment(entry.fromDate);
+      const to = moment(entry.toDate);
+      while (from.isSameOrBefore(to)) {
+        const dateStr = from.format("YYYY-MM-DD");
+        map.set(dateStr, entry.type); // "CASUAL", "HALF", etc.
+        from.add(1, "day");
+      }
+    }
+  }
+
+  return map;
+};
+
+// 📅 Attendance Summary API
+
 module.exports.GetMonthlyAttendanceSummary = async (req, res) => {
   try {
     const userId = req.user.userid;
@@ -266,6 +271,7 @@ module.exports.GetMonthlyAttendanceSummary = async (req, res) => {
     );
     const endDate = moment(startDate).endOf("month");
 
+    // All days in month
     const allDatesInMonth = [];
     const current = startDate.clone();
     while (current.isSameOrBefore(endDate)) {
@@ -275,73 +281,122 @@ module.exports.GetMonthlyAttendanceSummary = async (req, res) => {
 
     const attendanceRecords = await Attendance.find({
       userId,
-      date: {
-        $gte: startDate.toDate(),
-        $lte: endDate.toDate(),
-      },
+      date: { $gte: startDate.toDate(), $lte: endDate.toDate() },
     });
 
     const user = await User.findById(userId);
     const holidayData = await Holiday.findOne({ companyId: user.Company });
 
+    // Get approved leaves in the month
+    const userLeaves = await UserLeave.find({
+      userId,
+      "leavesTaken.status": "Approved",
+      $or: [
+        {
+          "leavesTaken.fromDate": {
+            $gte: startDate.toDate(),
+            $lte: endDate.toDate(),
+          },
+        },
+        {
+          "leavesTaken.toDate": {
+            $gte: startDate.toDate(),
+            $lte: endDate.toDate(),
+          },
+        },
+        {
+          "leavesTaken.fromDate": { $lte: startDate.toDate() },
+          "leavesTaken.toDate": { $gte: endDate.toDate() },
+        },
+      ],
+    });
+
+    // Create map of all leave days
+    const leaveDaysMap = new Map();
+    userLeaves.forEach((leaveDoc) => {
+      leaveDoc.leavesTaken.forEach((leave) => {
+        if (leave.status === "Approved") {
+          const from = moment(leave.fromDate).startOf("day");
+          const to = moment(leave.toDate).startOf("day");
+          const temp = from.clone();
+
+          while (temp.isSameOrBefore(to)) {
+            const dateStr = temp.format("YYYY-MM-DD");
+            leaveDaysMap.set(dateStr, leave.type); // e.g., CASUAL, HALF
+            temp.add(1, "day");
+          }
+        }
+      });
+    });
+
     const today = moment().startOf("day");
 
+    // Build the final summary
     const summary = allDatesInMonth.map((day) => {
       const dateStr = day.format("YYYY-MM-DD");
+      const dayOfWeek = day.format("dddd");
 
+      // ✅ 1. Attendance check first (overrides leave)
       const record = attendanceRecords.find(
         (att) => moment(att.date).format("YYYY-MM-DD") === dateStr
       );
-
-      const isWeekend =
-        holidayData?.weeklyOff?.includes(day.format("dddd")) ?? false;
-      const isHoliday =
-        holidayData?.holidays?.some((h) => h.date === dateStr) ?? false;
-
-      const overrideToday = holidayData?.overrides?.find(
-        (o) => moment(o.date).format("YYYY-MM-DD") === dateStr
-      );
-      const isOverrideHoliday = overrideToday && !overrideToday.isWorkingDay;
-
-      if (day.isSame(today)) {
-        return {
-          date: dateStr,
-          status: record ? record.status : "Pending",
-          ...(record && {
-            check_in_time: record.check_in_time,
-            check_out_time: record.check_out_time,
-          }),
-        };
-      }
-
-      if (day.isAfter(today)) {
-        return {
-          date: dateStr,
-          status: "Upcoming",
-        };
-      }
-
       if (record) {
+        if (leaveDaysMap.has(dateStr)) {
+          console.log(`📌 Attendance overrides leave on ${dateStr}`);
+        }
         return {
           date: dateStr,
           status: record.status,
           check_in_time: record.check_in_time,
           check_out_time: record.check_out_time,
         };
-      } else if (isOverrideHoliday || isHoliday || isWeekend) {
+      }
+
+      // ✅ 2. Leave check (only if no attendance)
+      if (leaveDaysMap.has(dateStr)) {
+        const leaveType = leaveDaysMap.get(dateStr);
         return {
           date: dateStr,
-          status: "Holiday",
-        };
-      } else {
-        return {
-          date: dateStr,
-          status: "Absent",
+          status: leaveType === "HALF" ? "Half Day" : "Leave",
         };
       }
+
+      // ✅ 3. Today
+      if (day.isSame(today)) {
+        return { date: dateStr, status: "Pending" };
+      }
+
+      // ✅ 4. Upcoming
+      if (day.isAfter(today)) {
+        return { date: dateStr, status: "Upcoming" };
+      }
+
+      // ✅ 5. Holiday/weekend checks
+      const isWeekend = (holidayData?.weeklyOff || []).some(
+        (dow) => dow.toLowerCase() === dayOfWeek.toLowerCase()
+      );
+      const isHoliday = (holidayData?.holidays || []).some(
+        (h) => moment(h.date).format("YYYY-MM-DD") === dateStr
+      );
+      const overrideToday = (holidayData?.overrides || []).find(
+        (o) => moment(o.date).format("YYYY-MM-DD") === dateStr
+      );
+
+      if (overrideToday) {
+        return {
+          date: dateStr,
+          status: overrideToday.isWorkingDay ? "Absent" : "Holiday",
+        };
+      }
+
+      if (isWeekend || isHoliday) {
+        return { date: dateStr, status: "Holiday" };
+      }
+
+      // ✅ 6. Default fallback
+      return { date: dateStr, status: "Absent" };
     });
 
-    // Count summary (e.g. Present, Absent, Holiday)
     const countSummary = summary.reduce((acc, curr) => {
       acc[curr.status] = (acc[curr.status] || 0) + 1;
       return acc;
@@ -363,23 +418,98 @@ module.exports.GetMonthlyAttendanceSummary = async (req, res) => {
   }
 };
 
+module.exports.HandleGetTodayAttendance = async (req, res) => {
+  try {
+    const userId = req.user?.userid;
 
+    const today = moment().startOf("day").toDate();
+
+    const aajkaAttend = await Attendance.findOne({ userId, date: today });
+
+    if (!aajkaAttend) {
+      return res.status(404).json({
+        success: false,
+        message: "nahi aaj ka attendence",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "successfully fetch",
+      data: aajkaAttend,
+    });
+  } catch (error) {
+    console.log(error);
+    return res.status(500).json({
+      success: false,
+      message: "server error today attendence",
+    });
+  }
+};
 
 module.exports.GetAttendanceStatistics = async (req, res) => {
   try {
     const userId = req.user.userid;
     const user = await User.findById(userId);
-    if (!user) return res.status(404).json({ success: false, message: "User not found" });
+    if (!user) {
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
+    }
 
     const today = moment().startOf("day");
+    const now = moment();
     const weekStart = moment().startOf("isoWeek");
     const monthStart = moment().startOf("month");
     const monthEnd = moment().endOf("month");
 
-    const records = await Attendance.find({
-      userId,
-      date: { $gte: monthStart.toDate(), $lte: monthEnd.toDate() },
+    const [holidays, leaves, records] = await Promise.all([
+      Holiday.find({
+        date: { $gte: monthStart.toDate(), $lte: monthEnd.toDate() },
+      }),
+      UserLeave.find({
+        userId,
+        date: { $gte: monthStart.toDate(), $lte: monthEnd.toDate() },
+      }),
+      Attendance.find({
+        userId,
+        date: { $gte: monthStart.toDate(), $lte: monthEnd.toDate() },
+      }),
+    ]);
+
+    const holidayDates = holidays.map((h) =>
+      moment(h.date).format("YYYY-MM-DD")
+    );
+    const leaveMap = new Map();
+    leaves.forEach((leave) => {
+      const dateStr = moment(leave.date).format("YYYY-MM-DD");
+      leaveMap.set(dateStr, leave.leaveType || "full");
     });
+
+    // Get the assigned shift
+    let selectedShift = null;
+    if (user.shiftId) {
+      const shiftDoc = await Shift.findOne({ "shifts._id": user.shiftId });
+      if (shiftDoc) {
+        selectedShift = shiftDoc.shifts.find(
+          (s) => s._id.toString() === user.shiftId.toString()
+        );
+      }
+    }
+
+    // Calculate shift duration (without excluding breaks, breaks are included)
+    let shiftDuration = 0;
+    if (selectedShift) {
+      let punchIn = moment(selectedShift.punchIn, "HH:mm");
+      let punchOut = moment(selectedShift.punchOut, "HH:mm");
+
+      // If punchOut is before punchIn, it's an overnight shift
+      if (punchOut.isBefore(punchIn)) {
+        punchOut.add(1, "day");
+      }
+
+      shiftDuration = punchOut.diff(punchIn, "minutes");
+    }
 
     let todayMinutes = 0,
       weekMinutes = 0,
@@ -391,31 +521,65 @@ module.exports.GetAttendanceStatistics = async (req, res) => {
 
     records.forEach((rec) => {
       const day = moment(rec.date).startOf("day");
-      const mins = rec.workingHours
-        ? parseInt(rec.workingHours.split("h")[0]) * 60 + parseInt(rec.workingHours.split("h")[1])
-        : 0;
-      const required = rec.requiredTime
-        ? parseInt(rec.requiredTime.split("h")[0]) * 60 + parseInt(rec.requiredTime.split("h")[1])
-        : 0;
+      const dayStr = day.format("YYYY-MM-DD");
+
+      const isHoliday = holidayDates.includes(dayStr);
+      const leaveType = leaveMap.get(dayStr);
+
+      let mins = 0;
+
+      if (rec.check_in_time && !rec.check_out_time && day.isSame(today)) {
+        // Currently working today
+        const checkIn = moment(rec.check_in_time, "HH:mm");
+        mins = now.diff(checkIn, "minutes");
+      } else if (rec.workingHours) {
+        const [h, m] = rec.workingHours.split("h ");
+        mins = parseInt(h) * 60 + parseInt(m);
+      } else if (rec.check_in_time && rec.check_out_time) {
+        // fallback if workingHours is not available
+        const checkIn = moment(rec.check_in_time, "HH:mm");
+        const checkOut = moment(rec.check_out_time, "HH:mm");
+        if (checkOut.isBefore(checkIn)) {
+          checkOut.add(1, "day"); // overnight shift fallback
+        }
+        mins = checkOut.diff(checkIn, "minutes");
+      }
+
+      let required = rec.requiredTime
+        ? parseInt(rec.requiredTime.split("h")[0]) * 60 +
+          parseInt(rec.requiredTime.split("h")[1])
+        : shiftDuration + (rec.lateByMinutes || 0);
+
+      const adjustedRequired = isHoliday
+        ? 0
+        : leaveType === "full"
+        ? 0
+        : leaveType === "half"
+        ? Math.floor(required / 2)
+        : required;
 
       if (day.isSame(today)) {
         todayMinutes += mins;
-        todayRequired += required;
+        todayRequired += adjustedRequired;
       }
+
       if (day.isSameOrAfter(weekStart)) {
         weekMinutes += mins;
-        weekRequired += required;
+        weekRequired += adjustedRequired;
       }
+
       monthMinutes += mins;
-      monthRequired += required;
+      monthRequired += adjustedRequired;
 
       const ot = rec.overtime
-        ? parseInt(rec.overtime.split("h")[0]) * 60 + parseInt(rec.overtime.split("h")[1])
+        ? parseInt(rec.overtime.split("h")[0]) * 60 +
+          parseInt(rec.overtime.split("h")[1])
         : 0;
       overtimeMinutes += ot;
     });
 
-    const format = (mins) => `${Math.floor(mins / 60)}.${(mins % 60).toString().padStart(2, '0')}`;
+    const format = (mins) =>
+      `${Math.floor(mins / 60)}.${(mins % 60).toString().padStart(2, "0")}`;
 
     return res.status(200).json({
       success: true,
@@ -423,7 +587,9 @@ module.exports.GetAttendanceStatistics = async (req, res) => {
         today: `${format(todayMinutes)} / ${format(todayRequired)} hrs`,
         thisWeek: `${format(weekMinutes)} / ${format(weekRequired)} hrs`,
         thisMonth: `${format(monthMinutes)} / ${format(monthRequired)} hrs`,
-        remaining: `${format(Math.max(monthRequired - monthMinutes, 0))} / ${format(monthRequired)} hrs`,
+        remaining: `${format(
+          Math.max(monthRequired - monthMinutes, 0)
+        )} / ${format(monthRequired)} hrs`,
         overtime: `${format(overtimeMinutes)} / ${format(overtimeMinutes)} hrs`,
       },
     });
@@ -437,57 +603,134 @@ module.exports.GetAttendanceStatistics = async (req, res) => {
   }
 };
 
-
-
-
-
-
-
 /////////////////////////////---BY Company---////////////////////////////
-
-
-
 
 module.exports.GetCompanyAttendanceSummary = async (req, res) => {
   try {
-    const companyId =  req.user?.company_id; // ✅ Company directly from token
+    const companyId = req.user?.company_id;
     if (!companyId) {
-      return res.status(400).json({ success: false, message: "Company ID missing in token" });
+      return res
+        .status(400)
+        .json({ success: false, message: "Company ID missing in token" });
     }
 
-    const today = moment().startOf("day").toDate();
+    const { date, month, year } = req.query;
 
-    // 🔹 Get all employee IDs in this company
-    const employeeIds = await User.find({ Company: companyId }).distinct("_id");
+    const employees = await User.find({ Company: companyId })
+      .select("_id name last_name designation")
+      .lean();
 
-    // 🔹 Get all attendance records for today
-    const attendanceToday = await Attendance.find({
-      userId: { $in: employeeIds },
-      date: today,
+    const employeeIdMap = new Map();
+    employees.forEach((emp) => {
+      employeeIdMap.set(emp._id.toString(), emp);
     });
 
-    // 🔹 Count logic
-    let present = 0, late = 0, onLeave = 0;
+    const employeeIds = employees.map((e) => e._id);
+
+    let attendanceRecords = [];
+    let responseDate;
+    const present = [];
+    const late = [];
+    const onLeave = [];
+    const markedIds = new Set();
     const presentStatuses = ["Present", "Late", "HalfDay"];
 
-    attendanceToday.forEach((record) => {
-      if (record.status === "Late") late++;
-      if (presentStatuses.includes(record.status)) present++;
-      if (record.status === "OnLeave") onLeave++;
+    if (date) {
+      // 🔹 Filter by specific date
+      const selectedDate = moment(date).startOf("day").toDate();
+
+      attendanceRecords = await Attendance.find({
+        userId: { $in: employeeIds },
+        date: selectedDate,
+      }).lean();
+
+      responseDate = moment(selectedDate).format("YYYY-MM-DD");
+    } else if (month && year) {
+      // 🔹 Filter by month
+      const selectedMonth = parseInt(month);
+      const selectedYear = parseInt(year);
+
+      const startOfMonth = moment(
+        `${selectedYear}-${selectedMonth}-01`
+      ).startOf("month");
+      const endOfMonth = moment(startOfMonth).endOf("month");
+
+      attendanceRecords = await Attendance.find({
+        userId: { $in: employeeIds },
+        date: {
+          $gte: startOfMonth.toDate(),
+          $lte: endOfMonth.toDate(),
+        },
+      }).lean();
+
+      responseDate = `${selectedYear}-${String(selectedMonth).padStart(
+        2,
+        "0"
+      )}`;
+    } else {
+      // 🔹 Default: Today
+      const today = moment().startOf("day").toDate();
+
+      attendanceRecords = await Attendance.find({
+        userId: { $in: employeeIds },
+        date: today,
+      }).lean();
+
+      responseDate = moment(today).format("YYYY-MM-DD");
+    }
+
+    // 🔁 Classify
+    attendanceRecords.forEach((record) => {
+      const user = employeeIdMap.get(record.userId.toString());
+      if (!user) return;
+
+      const userInfo = {
+        userId: user._id,
+        name: `${user.name} ${user.last_name}`,
+        designation: user.designation || "N/A",
+        status: record.status,
+        date: moment(record.date).format("YYYY-MM-DD"),
+      };
+
+      markedIds.add(user._id.toString());
+
+      if (record.status === "Late") {
+        late.push(userInfo);
+        present.push(userInfo);
+      } else if (record.status === "OnLeave") {
+        onLeave.push(userInfo);
+      } else if (presentStatuses.includes(record.status)) {
+        present.push(userInfo);
+      }
     });
 
-    const absent = employeeIds.length - attendanceToday.length;
+    const absent = employees
+      .filter((emp) => !markedIds.has(emp._id.toString()))
+      .map((emp) => ({
+        userId: emp._id,
+        name: `${emp.name} ${emp.last_name}`,
+        designation: emp.designation || "N/A",
+        status: "Absent",
+      }));
 
-    // ✅ Final response
     return res.status(200).json({
       success: true,
-      date: moment(today).format("YYYY-MM-DD"),
+      type: date ? "specific-date" : month && year ? "month" : "today",
+      date: responseDate,
       companyId,
-      totalEmployees: employeeIds.length,
-      present,
-      late,
-      absent,
-      onLeave
+      totalEmployees: employees.length,
+      counts: {
+        present: present.length,
+        late: late.length,
+        onLeave: onLeave.length,
+        absent: absent.length,
+      },
+      employees: {
+        present,
+        late,
+        onLeave,
+        absent,
+      },
     });
   } catch (error) {
     console.error("Error in GetCompanyAttendanceSummary:", error);
@@ -497,11 +740,7 @@ module.exports.GetCompanyAttendanceSummary = async (req, res) => {
       error: error.message,
     });
   }
-}; 
-
-
-
-
+};
 
 module.exports.GetMonthlyCompanyAttendance = async (req, res) => {
   try {
@@ -571,8 +810,6 @@ module.exports.GetMonthlyCompanyAttendance = async (req, res) => {
   }
 };
 
-
-
 module.exports.GetFullCompanyUserAttendance = async (req, res) => {
   try {
     const companyId = req.user.company_id;
@@ -588,15 +825,16 @@ module.exports.GetFullCompanyUserAttendance = async (req, res) => {
     const startDate = moment(`${year}-${month}-01`).startOf("month");
     const endDate = moment(startDate).endOf("month");
     const today = moment();
-    const isCurrentMonth = today.isSame(startDate, "month") && today.isSame(startDate, "year");
+    const isCurrentMonth =
+      today.isSame(startDate, "month") && today.isSame(startDate, "year");
     const lastCountableDate = isCurrentMonth ? today : endDate;
     const totalDays = lastCountableDate.diff(startDate, "days") + 1;
 
     const users = await User.find({ Company: companyId });
     const userMap = {};
-    users.forEach(user => userMap[user._id.toString()] = user.name);
+    users.forEach((user) => (userMap[user._id.toString()] = user.name));
 
-    const allUserIds = users.map(u => u._id);
+    const allUserIds = users.map((u) => u._id);
 
     // ✅ Fetch attendance for all users at once
     const attendanceRecords = await Attendance.find({
@@ -609,11 +847,13 @@ module.exports.GetFullCompanyUserAttendance = async (req, res) => {
 
     // ✅ Group records by userId
     const attendanceMap = {};
-    attendanceRecords.forEach(record => {
+    attendanceRecords.forEach((record) => {
       const uid = record.userId.toString();
       if (!attendanceMap[uid]) attendanceMap[uid] = [];
       attendanceMap[uid].push(record);
     });
+
+
 
     const result = [];
 
@@ -621,7 +861,9 @@ module.exports.GetFullCompanyUserAttendance = async (req, res) => {
       const userIdStr = user._id.toString();
       const records = attendanceMap[userIdStr] || [];
 
-      let present = 0, late = 0, onLeave = 0;
+      let present = 0,
+        late = 0,
+        onLeave = 0;
 
       records.forEach((record) => {
         if (["Present", "HalfDay"].includes(record.status)) present++;
@@ -632,14 +874,22 @@ module.exports.GetFullCompanyUserAttendance = async (req, res) => {
         if (record.status === "OnLeave") onLeave++;
       });
 
-      const absent = totalDays - records.length;
-      const attendancePercentage = totalDays > 0 ? ((present / totalDays) * 100).toFixed(2) : "0.00";
+      const countedDays = records.filter((r) =>
+        ["Present", "HalfDay", "Late", "OnLeave"].includes(r.status)
+      ).length;
+
+      const absent = totalDays - countedDays;
+
+      // const absent = totalDays - records.length;
+      const attendancePercentage =
+        totalDays > 0 ? ((present / totalDays) * 100).toFixed(2) : "0.00";
 
       result.push({
         userId: user._id,
         name: user.name,
         present,
         absent,
+
         late,
         onLeave,
         attendancePercentage: `${attendancePercentage}%`,
@@ -659,151 +909,247 @@ module.exports.GetFullCompanyUserAttendance = async (req, res) => {
       error: error.message,
     });
   }
-}
+};
 
 
-module.exports.GetCompanyLateCount = async (req, res) => {
-  try{
-     const companyId = req.user?.company_id;
-       const { date, from, to } = req.query;
-
-       if(!companyId){
-        return res.status(400).json({
-          success:false,
-          message:"Company Id missing"
-        })
-       }
-
-          if (!date && (!from || !to)) {
-      return res.status(400).json({
-        success: false,
-        message: "Please provide either 'date' or both 'from' and 'to'",
-      });
-    }
-
-    const employeeIds= await User.find({Company:companyId}).distinct("_id")
-
-    let dateFilter={};
-
-    if(date){
-      const targetDate = moment(date, "YYYY-MM-DD").startOf("day").toDate();
-      dateFilter.date = { $eq: targetDate };
-    }
-    else{
-       const fromDate = moment(from, "YYYY-MM-DD").startOf("day").toDate();
-      const toDate = moment(to, "YYYY-MM-DD").endOf("day").toDate();
-      dateFilter.date = { $gte: fromDate, $lte: toDate };
-    }
-
-    const lateCount = await Attendance.countDocuments({
-      userId: { $in: employeeIds },
-      status: "Late",
-      ...dateFilter,
-    }); 
-
-
-     const totalEmployees = employeeIds.length;
-
-    return res.status(200).json({
-      success: true,
-      companyId,
-      date: date || `${from} to ${to}`,
-      totalEmployees,
-      lateCount,
-      percentageLate: ((lateCount / totalEmployees) * 100).toFixed(2) + "%",
-    });
-
-  }
-  catch(error){
-    console.log(error)
-
-      return res.status(500).json({
-      success: false,
-      message: "Server error",
-      error: error.message,
-    });
-  }
-}
-
-
-
-module.exports.GetCompanyAbsentUsers = async (req, res) => {
+module.exports.GetCompanyEmployee = async (req, res) => {
   try {
     const companyId = req.user?.company_id;
     const { date, from, to } = req.query;
 
     if (!companyId) {
-      return res.status(400).json({ success: false, message: "Company ID missing" });
+      return res.status(400).json({
+        success: false,
+        message: "Company Id missing ",
+      });
     }
 
     if (!date && (!from || !to)) {
       return res.status(400).json({
         success: false,
-        message: "Provide either 'date' or both 'from' and 'to'",
+        message: "Please providre ",
+      });
+    }
+  } catch (error) {
+    console.log(error);
+    return res.status(500).json({
+      success: false,
+      message: "Server Its GetCompanyEmployee",
+    });
+  }
+};
+
+module.exports.HandleGetMonthlyAttendance = async (req, res) => {
+  try {
+    const userId = req.user?.userid;
+    if (!userId) {
+      return res.status(400).json({
+        success: false,
+        message: "Unauthorized: User ID not found in token",
       });
     }
 
-    // 1️⃣ Get users
-    const users = await User.find({ Company: companyId }).select("_id name email");
-    const userIds = users.map((u) => u._id.toString());
-    const userMap = {};
-    users.forEach((u) => (userMap[u._id.toString()] = u));
+    // Get month and year from query params (defaults to current month/year)
+    const month = parseInt(req.query.month) || moment().month() + 1; // month is 1-based from query
+    const year = parseInt(req.query.year) || moment().year();
 
-    // 2️⃣ Prepare date list
-    let dateList = [];
-
-    if (date) {
-      dateList = [moment(date, "YYYY-MM-DD").startOf("day")];
-    } else {
-      const start = moment(from, "YYYY-MM-DD").startOf("day");
-      const end = moment(to, "YYYY-MM-DD").endOf("day");
-      let current = start.clone();
-      while (current.isSameOrBefore(end)) {
-        dateList.push(current.clone());
-        current.add(1, "day");
-      }
+    if (month < 1 || month > 12) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid month. Must be between 1 and 12.",
+      });
     }
 
-    // 3️⃣ Get ALL attendance in one go
-    const attendances = await Attendance.find({
-      userId: { $in: userIds },
-      date: { $gte: dateList[0].toDate(), $lte: dateList[dateList.length - 1].toDate() },
+    const startDate = moment(`${year}-${month}-01`).startOf("month").toDate();
+    const endDate = moment(startDate).endOf("month").toDate();
+
+    const attendanceRecord = await Attendance.find({
+      userId,
+      date: { $gte: startDate, $lte: endDate },
+    }).sort({ date: 1 });
+
+    return res.status(200).json({
+      success: true,
+      message: "Monthly attendance fetched successfully",
+      data: attendanceRecord,
     });
-
-    // 4️⃣ Build map: { "userId|YYYY-MM-DD": true }
-    const attendanceMap = {};
-    attendances.forEach((att) => {
-      const key = `${att.userId.toString()}|${moment(att.date).format("YYYY-MM-DD")}`;
-      attendanceMap[key] = true;
+  } catch (error) {
+    console.error("Error in GetMonthlyAttendance:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error while fetching monthly attendance",
     });
+  }
+};
 
-    // 5️⃣ Find absent entries
-    const absents = [];
 
-    for (const dateObj of dateList) {
-      const dateStr = dateObj.format("YYYY-MM-DD");
-      for (const userId of userIds) {
-        const key = `${userId}|${dateStr}`;
-        if (!attendanceMap[key]) {
-          const user = userMap[userId];
-          absents.push({
-            date: dateStr,
-            userId,
-            name: user.name,
-            email: user.email,
-            status: "Absent",
-          });
+
+module.exports.GetCompanyAttendanceWithHolidays = async (req, res) => {
+  try {
+    const companyId = req.user?.company_id;
+    const { month, year } = req.query;
+
+    if (!companyId || !month || !year) {
+      return res.status(400).json({
+        success: false,
+        message: "companyId, month, and year are required",
+      });
+    }
+
+    const startDate = moment(`${year}-${month}-01`).startOf("month");
+    const endDate = moment(startDate).endOf("month");
+    const today = moment();
+    const isCurrentMonth = today.isSame(startDate, "month") && today.isSame(startDate, "year");
+    const lastDate = isCurrentMonth ? today : endDate;
+
+    const totalDays = lastDate.diff(startDate, "days") + 1;
+
+    const users = await User.find({ Company: companyId }).select("_id name last_name profile_image").lean();
+    const userIds = users.map((u) => u._id);
+
+    const [attendanceRecords, holidayData, userLeaves] = await Promise.all([
+      Attendance.find({
+        userId: { $in: userIds },
+        date: { $gte: startDate.toDate(), $lte: lastDate.toDate() },
+      }),
+      Holiday.findOne({ companyId }),
+      UserLeave.find({
+        userId: { $in: userIds },
+        "leavesTaken.status": "Approved",
+        $or: [
+          {
+            "leavesTaken.fromDate": { $lte: endDate.toDate() },
+            "leavesTaken.toDate": { $gte: startDate.toDate() },
+          },
+        ],
+      }),
+    ]);
+
+    // Prepare leave map
+    const leaveMap = new Map();
+    userLeaves.forEach((leaveDoc) => {
+      leaveDoc.leavesTaken.forEach((leave) => {
+        if (leave.status !== "Approved") return;
+        const from = moment(leave.fromDate).startOf("day");
+        const to = moment(leave.toDate).startOf("day");
+        while (from.isSameOrBefore(to)) {
+          const key = `${leaveDoc.userId}_${from.format("YYYY-MM-DD")}`;
+          leaveMap.set(key, leave.type);
+          from.add(1, "day");
         }
+      });
+    });
+
+    // Prepare holiday and override maps
+    const holidays = (holidayData?.holidays || []).map((h) => moment(h.date).format("YYYY-MM-DD"));
+    const weeklyOffs = holidayData?.weeklyOff || [];
+    const overrides = {};
+    (holidayData?.overrides || []).forEach((ov) => {
+      overrides[moment(ov.date).format("YYYY-MM-DD")] = ov.isWorkingDay ? "Working" : "Holiday";
+    });
+
+    const dateList = [];
+    let day = startDate.clone();
+    while (day.isSameOrBefore(lastDate)) {
+      dateList.push(day.clone());
+      day.add(1, "day");
+    }
+
+    const groupedAttendance = {};
+    attendanceRecords.forEach((rec) => {
+      const key = `${rec.userId}_${moment(rec.date).format("YYYY-MM-DD")}`;
+      groupedAttendance[key] = rec;
+    });
+
+    const finalResult = [];
+
+    for (const user of users) {
+      let present = 0,
+        absent = 0,
+        late = 0,
+        leave = 0;
+      const dailyRecords = [];
+
+      for (const date of dateList) {
+        const dateStr = date.format("YYYY-MM-DD");
+        const dayOfWeek = date.format("dddd");
+        const key = `${user._id}_${dateStr}`;
+
+        let status = "Absent";
+        let source = "Default";
+        let check_in_time = null;
+        let check_out_time = null;
+        let overtime = 0; // in minutes or as stored
+
+        // Handle holiday/override logic
+        if (overrides[dateStr] === "Holiday") {
+          status = "Holiday";
+          source = "Override";
+        } else if (overrides[dateStr] === "Working") {
+          // continue
+        } else if (holidays.includes(dateStr)) {
+          status = "Holiday";
+          source = "Holiday List";
+        } else if (weeklyOffs.includes(dayOfWeek)) {
+          status = "Holiday";
+          source = "Weekly Off";
+        }
+
+        const attendance = groupedAttendance[key];
+        if (attendance) {
+          status = attendance.status;
+          source = "Attendance";
+          check_in_time = attendance.check_in_time || null;
+          check_out_time = attendance.check_out_time || null;
+          overtime = attendance.overtime || 0;
+
+          if (["Present", "HalfDay"].includes(attendance.status)) present++;
+          if (attendance.status === "Late") {
+            present++;
+            late++;
+          }
+        } else if (leaveMap.has(key) && status !== "Holiday") {
+          status = leaveMap.get(key) === "HALF" ? "Half Day Leave" : "Leave";
+          source = "Leave";
+          leave++;
+        } else if (status !== "Holiday") {
+          absent++;
+        }
+
+        dailyRecords.push({
+          date: dateStr,
+          status,
+          source,
+          check_in_time,
+          check_out_time,
+          overtime, // added field
+        });
       }
+
+      const percentage = totalDays > 0 ? ((present / totalDays) * 100).toFixed(2) : "0.00";
+
+      finalResult.push({
+        userId: user._id,
+        name: `${user.name} ${user.last_name || ""}`,
+        profile_image: user.profile_image || null,
+        present,
+        late,
+        leave,
+        absent,
+        attendancePercentage: `${percentage}%`,
+        records: dailyRecords,
+      });
     }
 
     return res.status(200).json({
       success: true,
-      count: absents.length,
-      data: absents,
+      companyId,
+      month: `${month}-${year}`,
+      totalDays,
+      data: finalResult,
     });
   } catch (error) {
-    console.error("Error in GetCompanyAbsentUsers:", error);
+    console.error("Error in GetCompanyAttendanceWithHolidays:", error);
     return res.status(500).json({
       success: false,
       message: "Server error",
