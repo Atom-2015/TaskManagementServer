@@ -35,52 +35,51 @@ module.exports.createShift = async (req, res) => {
     });
   }
 };
-
 module.exports.getShift = async (req, res) => {
   try {
+    let companyId = req.user?.company_id;
 
-    const userId=req.user?.userid;
-    if(!userId){
-      return res.status(400).json({
-        success:false,
-        message:"userId not found"
-      })
+    if (!companyId && req.user?.userid) {
+      const user = await User.findById(req.user.userid).lean();
+      if (!user || !user.Company) {
+        return res.status(404).json({
+          success: false,
+          message: "User or associated company not found"
+        });
+      }
+      companyId = user.Company.toString();
     }
 
-    const user= await User.findById(userId).lean();
-    if(!user || !user.Company){
-      return res.status(404).json({
-        success:false,
-        message:"User or associated company not found"
-      })
-    }
-
-    const companyId=user.Company.toString();
-    //const companyId = req.user?.company_id;
     if (!companyId) {
       return res.status(400).json({
         success: false,
-        message: "companyId not found",
+        message: "Company ID not found"
       });
     }
 
     const shiftedData = await Shift.findOne({ companyId }).lean();
 
     if (!shiftedData) {
-      return res
-        .status(404)
-        .json({ success: true, message: "no shiftes Data in company" });
+      return res.status(404).json({
+        success: true,
+        message: "No shifts found for this company"
+      });
     }
 
     return res.status(200).json({
       success: true,
-      message: "successFully fetch",
-      data: shiftedData,
+      message: "Successfully fetched shift data",
+      data: shiftedData
     });
   } catch (error) {
-    console.log(error);
+    console.error("Error in getShift:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Server error while getting shift data"
+    });
   }
 };
+
 
 module.exports.editShift = async (req, res) => {
   try {
@@ -144,12 +143,7 @@ module.exports.deleteShift = async (req, res) => {
     const companyId = req.user?.company_id;
     const shiftId = req.params.shiftId;
 
-    if (!shiftId || !companyId) {
-      return res.status(400).json({
-        success: false,
-        message: "Shift ID or Company ID missing",
-      });
-    }
+   
 
     // if(!companyId){
     //     return res.status(400).json({
