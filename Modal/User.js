@@ -38,6 +38,7 @@ const UserSchema = new mongoose.Schema({
     default: "Employee",
   },
   profile_image: { type: String, default: null },
+  salary:{type:Number}
 });
 
 // module.exports = mongoose.model('User', UserSchema);

@@ -75,6 +75,10 @@ const subTaskSchema = new mongoose.Schema({
         default:0
     },
 
+    comment:{
+        type:String,
+    },
+
     updateHistory:[{
         userId:{type : mongoose.Schema.Types.ObjectId,
             ref:"User"

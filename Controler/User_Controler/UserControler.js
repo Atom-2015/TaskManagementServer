@@ -97,6 +97,7 @@ module.exports.HandleAddUser = async (req, res) => {
       Company,
       shiftId,
       profile_image: imageUrl,
+      salary
     });
 
     return res.status(201).json({

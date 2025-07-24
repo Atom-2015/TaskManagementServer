@@ -31,6 +31,11 @@ router.use("/shift",require('./shift_route'));
 //attendence
  router.use("/attend",require('./attendence_route'))
 
+
+ //payroll
+ router.use("/payroll",require('./payroll_route'));
+
+
  module.exports = router; 
 
 

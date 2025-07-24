@@ -2,88 +2,7 @@
 const Task = require('../../Modal/Task');
 const SubTask = require('../../Modal/SubTask');
 
-// module.exports.HandleSubTaskCreation = async (req, res) => {
-//   try {
-//     const {
-//       name,
-//       assigned_userid,
-//       priority,
-//       start_date,
-//       end_date,
-//       cost,
-//       status,
-//       checklist
-//     } = req.body;
 
-
-
-
-//     const task_id = req.headers['x-task-id'];
-
-
-//     console.log(`this is response ${JSON.stringify(req.body)}`)
-
-
-   
-
-//     const task = await SubTask.find({ task_id: task_id });
-//     if (!task) {
-
-//       const subtask = await SubTask.create({
-//         name,
-
-//         assigned_userid,
-//         task_id,
-//         priority,
-//         start_date,
-//         end_date,
-//         cost,
-//         status,
-//         checklist,
-//         position:  newPosition
-//       })
-
-//       // if(!subtask){
-//       //   return res.status(500).json({ message: "Failed to create subtask" });
-//       // }
-//       return res.status(201).json({ success: true, data: subtask });
-
-//     }
-
-//     const newSubTask = await SubTask.create({
-//       name,
-//       assigned_userid,
-//       priority,
-//       start_date,
-//       task_id,
-//       end_date,
-//       cost,
-//       status,
-//       checklist
-//     });
-
-
-
-
-//     if (!newSubTask) {
-//       return res.status(500).json({ message: "Failed to create subtask" });
-//     }
-
-//     return res.status(201).json({
-//       message: "Subtask created successfully",
-//       status: true,
-//       data: newSubTask
-
-//     });
-
-//   } catch (error) {
-//     console.error(error);
-//     return res.status(500).json({
-//       message: "Internal Server Error",
-//       status: false
-//     });
-//   }
-// };
 
 module.exports.HandleSubTaskCreation = async (req, res) => {
   try {
@@ -95,7 +14,8 @@ module.exports.HandleSubTaskCreation = async (req, res) => {
       end_date,
       cost,
       status,
-      checklist
+      checklist,
+      comment
     } = req.body;
 
     const task_id = req.headers['x-task-id'];
@@ -120,7 +40,8 @@ module.exports.HandleSubTaskCreation = async (req, res) => {
       status,
       checklist,
       task_id,
-      position: newPosition
+      position: newPosition,
+      comment
     });
 
     return res.status(201).json({
@@ -188,6 +109,7 @@ module.exports.HnadleEditSubTask = async (req, res) => {
       cost,
       checklist,
       status,
+      comment
     } = req.body;
 
     console.log(`this is data ${JSON.stringify(req.body)}`);
@@ -254,6 +176,7 @@ module.exports.HnadleEditSubTask = async (req, res) => {
         cost: updatedCost,
         status,
         checklist,
+        comment,
         $push: { updateHistory: { $each: updateHistory } },
       },
       { new: true }

@@ -27,6 +27,10 @@ router.put("/updateleave", leaveRoutes.updateLeavePolicy);
 // User leave
 router.post("/user-leave",isAuthenticated, leaveRoutes.createOrUpdateUserLeave);
 
+
+
+
+
 // Then dynamic routes
 router.get("/:companyId", leaveRoutes.HandleGetLeavePolicy);
 

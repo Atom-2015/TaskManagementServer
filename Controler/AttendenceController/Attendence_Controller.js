@@ -1,4 +1,4 @@
-const Attendance = require("../../Modal/attendence");
+const Attendance = require("../../Modal/Attendance");
 const User = require("../../Modal/User");
 const Holiday = require("../../Modal/Holiday");
 const UserLeave = require("../../Modal/leavefolder/userleaves");
