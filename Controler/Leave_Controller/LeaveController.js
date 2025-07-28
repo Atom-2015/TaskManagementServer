@@ -6,12 +6,21 @@ const UserLeave = require("../../Modal/leavefolder/userleaves");
 // Add Leave Policy
 module.exports.HandleAddLeavePolicy = async (req, res) => {
   try {
-    const { companyId, leaves } = req.body;
+    const companyId = req.user?.company_id;
 
-    if (!companyId || !Array.isArray(leaves) || leaves.length === 0) {
+    if (!companyId) {
       return res.status(400).json({
         success: false,
-        message: "companyId and at least one leave type are required",
+        message: "companyId is required in the token",
+      });
+    }
+
+    const { leaves } = req.body;
+
+    if (!Array.isArray(leaves) || leaves.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "At least one leave type is required",
       });
     }
 
@@ -24,6 +33,36 @@ module.exports.HandleAddLeavePolicy = async (req, res) => {
       }
     }
 
+    const existingPolicy = await LeavePolicy.findOne({ companyId });
+
+    if (existingPolicy) {
+      const updatedLeaves = [...existingPolicy.leaves];
+
+      for (const newLeave of leaves) {
+        const existingIndex = updatedLeaves.findIndex(
+          (leave) => leave.type === newLeave.type
+        );
+
+        if (existingIndex !== -1) {
+          // If leave type exists, update days
+          updatedLeaves[existingIndex].days = newLeave.days;
+        } else {
+          // If leave type doesn't exist, push new
+          updatedLeaves.push(newLeave);
+        }
+      }
+
+      existingPolicy.leaves = updatedLeaves;
+      const updatedPolicy = await existingPolicy.save();
+
+      return res.status(200).json({
+        success: true,
+        message: "Leave policy updated successfully",
+        data: updatedPolicy,
+      });
+    }
+
+    // Create new policy
     const newPolicy = new LeavePolicy({
       companyId,
       leaves,
@@ -37,18 +76,27 @@ module.exports.HandleAddLeavePolicy = async (req, res) => {
       data: savedPolicy,
     });
   } catch (error) {
-    console.error("Error adding leave policy:", error);
+    console.error("Error adding/updating leave policy:", error);
     return res.status(500).json({
       success: false,
-      message: "Server error while creating leave policy",
+      message: "Server error while creating/updating leave policy",
     });
   }
 };
 
+
+
 //update companyt policy by dhinchak pooja
 module.exports.updateLeavePolicy = async (req, res) => {
   try {
-    const { companyId, leaves } = req.body;
+    const companyId = req.user?.company_id; 
+    if(!companyId){
+      return res.status(400).json({
+        success: false,
+        message: "companyId is required in the token",
+      })
+    }
+    const { leaves } = req.body;
 
     if (!companyId || !Array.isArray(leaves) || leaves.length === 0) {
       return res.status(400).json({
@@ -87,7 +135,8 @@ module.exports.updateLeavePolicy = async (req, res) => {
 // Get Leave Policy by Company ID
 module.exports.HandleGetLeavePolicy = async (req, res) => {
   try {
-    const { companyId } = req.params;
+    // const { companyId } = req.params;
+    const companyId=req.user?.company_id; 
 
     if (!companyId) {
       return res.status(400).json({
@@ -117,6 +166,65 @@ module.exports.HandleGetLeavePolicy = async (req, res) => {
     });
   }
 };
+
+
+// DELETE /api/leave-policy?type=CASUAL
+module.exports.HandleDeleteLeavePolicy = async (req, res) => {
+  try {
+    const companyId = req.user?.company_id;
+    const { type } = req.query;
+
+    if (!companyId) {
+      return res.status(400).json({
+        success: false,
+        message: "companyId is required in the token",
+      });
+    }
+
+    if (!type || typeof type !== "string") {
+      return res.status(400).json({
+        success: false,
+        message: "Leave type is required in query (e.g. ?type=CASUAL)",
+      });
+    }
+
+    const existingPolicy = await LeavePolicy.findOne({ companyId });
+
+    if (!existingPolicy) {
+      return res.status(404).json({
+        success: false,
+        message: "Leave policy not found for this company",
+      });
+    }
+
+    const originalLength = existingPolicy.leaves.length;
+    existingPolicy.leaves = existingPolicy.leaves.filter(
+      (leave) => leave.type !== type
+    );
+
+    if (originalLength === existingPolicy.leaves.length) {
+      return res.status(404).json({
+        success: false,
+        message: `Leave type "${type}" not found in the policy`,
+      });
+    }
+
+    const updatedPolicy = await existingPolicy.save();
+
+    return res.status(200).json({
+      success: true,
+      message: `Leave type "${type}" deleted successfully`,
+      data: updatedPolicy,
+    });
+  } catch (error) {
+    console.error("Error deleting leave type:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Server error while deleting leave type from policy",
+    });
+  }
+};
+
 
 /**************************LEAVE API FOR ALL User******************************/
 

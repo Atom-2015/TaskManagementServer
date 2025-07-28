@@ -19,10 +19,10 @@ router.get("/usergetleave",isAuthenticated,leaveRoutes.getUserLeave);
 
 
 // Leave policy
-router.post("/leave", leaveRoutes.HandleAddLeavePolicy);
+router.post("/leave",isAuthenticated, leaveRoutes.HandleAddLeavePolicy);
 
 //update yaha karna leavepolicy ko bujhe ki nahi
-router.put("/updateleave", leaveRoutes.updateLeavePolicy);
+router.put("/updateleave", isAuthenticated, leaveRoutes.updateLeavePolicy);
 
 // User leave
 router.post("/user-leave",isAuthenticated, leaveRoutes.createOrUpdateUserLeave);
@@ -32,10 +32,12 @@ router.post("/user-leave",isAuthenticated, leaveRoutes.createOrUpdateUserLeave);
 
 
 // Then dynamic routes
-router.get("/:companyId", leaveRoutes.HandleGetLeavePolicy);
+router.get("/LeavePolicy",isAuthenticated, leaveRoutes.HandleGetLeavePolicy);
 
   
 //Only companies should be able to call this:
 router.put('/update-status',isAuthenticated,leaveRoutes.updateLeaveStatusByCompany);
+
+router.delete('/delete-policy', isAuthenticated, leaveRoutes.HandleDeleteLeavePolicy);
 
 module.exports = router;

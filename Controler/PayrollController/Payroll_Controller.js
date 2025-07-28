@@ -248,6 +248,7 @@ module.exports.getMonthlyPayrollSummary = async (req, res) => {
     }).populate("userId", "name email");
 
     const summary = payrolls.map((payroll) => ({
+        payrollId: payroll._id, 
       userId: payroll.userId._id,
       name: payroll.userId.name,
       email: payroll.userId.email,
@@ -368,29 +369,79 @@ module.exports.GetPayrollReport = async (req, res) => {
   }
 };
 
-module.exports.GetUserAnnualSalarySummary = async (req, res) => {
+
+module.exports.GetAddIncentive = async (req, res) => {
   try {
-    const { userId, year } = req.query;
-    if (!userId || !year) {
-      return res.status(400).json({
-        success: false,
-        message: "UserId and year are required to fetch annual salary summary",
-      });
+    const { id } = req.params;
+    const { label, amount } = req.body;
+
+    const payroll = await Payroll.findById(id);
+    if (!payroll) {
+      return res.status(404).json({ message: "Payroll not found" });
     }
 
-    const payrolls = await Payroll.find({ userId, year: parseInt(year) });
+    // Ensure earnings and incentives array exist
+    if (!payroll.earnings) {
+      payroll.earnings = {
+        salary: 0,
+        incentives: [],
+      };
+    }
+
+    if (!Array.isArray(payroll.earnings.incentives)) {
+      payroll.earnings.incentives = [];
+    }
+
+    // Add the incentive
+    payroll.earnings.incentives.push({ label, amount });
+
+    // Calculate total incentives
+    const totalIncentives = payroll.earnings.incentives.reduce(
+      (sum, item) => sum + Number(item.amount || 0),
+      0
+    );
+
+    const salary = Number(payroll.earnings.salary || 0);
+    const deductions = Number(payroll.deductions?.totalDeductions || 0);
+
+    // Recalculate netPay
+    payroll.netPay = salary + totalIncentives - deductions;
+
+    await payroll.save();
+
+    res.json({ success: true, message: "Incentive added", payroll });
   } catch (error) {
-    console.log("Error in GetUserAnnualSalarySummary:", error);
-    return res.status(500).json({
-      success: false,
-      message: "Seerve error while fetching annual salary summary",
-    });
+    console.error("Error in GetAddIncentive:", error);
+    res.status(500).json({ success: false, message: error.message });
   }
 };
 
+
+
+// module.exports.GetUserAnnualSalarySummary = async (req, res) => {
+//   try {
+//     const { userId, year } = req.query;
+//     if (!userId || !year) {
+//       return res.status(400).json({
+//         success: false,
+//         message: "UserId and year are required to fetch annual salary summary",
+//       });
+//     }
+
+//     const payrolls = await Payroll.find({ userId, year: parseInt(year) });
+//   } catch (error) {
+//     console.log("Error in GetUserAnnualSalarySummary:", error);
+//     return res.status(500).json({
+//       success: false,
+//       message: "Seerve error while fetching annual salary summary",
+//     });
+//   }
+// };
+
 module.exports.GetUserAnnualSalarySummary = async (req, res) => {
   try {
-    const { userId, year } = req.query;
+    const userId=req.user?.userid;
+    const {  year } = req.query;
     if (!userId || !year) {
       return res.status(400).json({
         success: false,
@@ -400,23 +451,35 @@ module.exports.GetUserAnnualSalarySummary = async (req, res) => {
 
     const payrolls = await Payroll.find({ userId, year: parseInt(year) });
 
-    const summary = Array.from({ length: 12 }, (_, i) => ({
+   const summary = Array.from({ length: 12 }, (_, i) => ({
       month: i + 1,
       salary: 0,
-      incentives: 0,
-      deductions: 0,
+      incentives: [],
+      totalIncentives: 0,
+      deductions: {
+        absentDays: 0,
+        unpaidLeaves: 0,
+        totalDeductions: 0,
+      },
       netPay: 0,
     }));
 
     payrolls.forEach((payroll) => {
       const monthIndex = payroll.month - 1;
+      const incentiveList = Array.isArray(payroll.earnings.incentives)
+        ? payroll.earnings.incentives
+        : [];
+
+      const totalIncentives = incentiveList.reduce((sum, i) => sum + i.amount, 0);
+
       summary[monthIndex].salary = payroll.earnings.salary || 0;
-      summary[monthIndex].incentives = Array.isArray(
-        payroll.earnings.incentives
-      )
-        ? payroll.earnings.incentives.reduce((sum, i) => sum + i.amount, 0)
-        : 0;
-      summary[monthIndex].deductions = payroll.deductions.totalDeductions || 0;
+      summary[monthIndex].incentives = incentiveList;
+      summary[monthIndex].totalIncentives = totalIncentives;
+      summary[monthIndex].deductions = {
+        absentDays: payroll.deductions.absentDays || 0,
+        unpaidLeaves: payroll.deductions.unpaidLeaves || 0,
+        totalDeductions: payroll.deductions.totalDeductions || 0,
+      };
       summary[monthIndex].netPay = payroll.netPay || 0;
     });
 
@@ -509,17 +572,16 @@ module.exports.DeletePayrollDeleteIncentive = async (req, res) => {
 
     const companyId = req.user?.company_id;
 
-    const { userId } = req.body;
+    // const { userId } = req.body;
 
-    console.log("CompanyId:", companyId);
-    console.log("UserId:", userId);
 
-    if (!userId) {
-      return res.status(400).json({
-        success: false,
-        message: "user id is not found",
-      });
-    }
+
+    // if (!userId) {
+    //   return res.status(400).json({
+    //     success: false,
+    //     message: "user id is not found",
+    //   });
+    // }
 
     if (!mongoose.Types.ObjectId.isValid(incentiveId)) {
       return res.status(400).json({
@@ -537,10 +599,10 @@ module.exports.DeletePayrollDeleteIncentive = async (req, res) => {
 
     const payroll = await Payroll.findOne({
       companyId,
-      userId,
+      
       "earnings.incentives._id": incentiveId,
     });
-    console.log("ye hai poayroll", payroll);
+   
 
     if (!payroll) {
       return res.status(404).json({
@@ -881,14 +943,3 @@ module.exports.HandlePerUserWholeSalary = async (req, res) => {
   }
 };
 
-
-module.exports.HandleWholeSalary=async(req,res)=>{
-  try{
-    const userId=req.user?.userid;
-    
-
-  }
-  catch(error){
-    console.log("okaythdfjsd",error)
-  }
-}

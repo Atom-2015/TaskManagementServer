@@ -9,6 +9,10 @@ router.post("/create", isAuthenticated, PayrollController.HandleAutoPayroll);
 //router the post salary for userid
 router.post("/Usersalary",isAuthenticated,PayrollController.HandlePerUserWholeSalary);
 
+//router add incetive it
+router.post("/:id/incentive",PayrollController.GetAddIncentive);
+
+
 // 🔁 move these above the dynamic route
 router.get("/getall", isAuthenticated, PayrollController.getMonthlyPayrollSummary);
 
