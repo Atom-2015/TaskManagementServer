@@ -40,4 +40,25 @@ const UploadCloudinary = async (buffer) => {
   });
 };
 
-module.exports = UploadCloudinary;
+
+const uploadLeaveDoc = (buffer) => {
+  if (!buffer?.length) throw new Error("Buffer is empty");
+  return new Promise((resolve, reject) => {
+    const stream = cloudinary.uploader.upload_stream(
+      {
+        folder: "leave",
+        resource_type: "raw",
+        use_filename: true,
+        unique_filename: true,
+         upload_preset: "taskapplicaation", // make sure preset allows raw, else remove
+        allowed_formats: ["pdf", "doc", "docx", "odt"],
+      },
+      (err, res) => (err ? reject(err) : resolve(res))
+    );
+    streamifier.createReadStream(buffer).pipe(stream);
+  });
+};
+
+
+
+module.exports = {UploadCloudinary,uploadLeaveDoc};

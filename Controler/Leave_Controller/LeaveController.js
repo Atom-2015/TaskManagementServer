@@ -1,3 +1,4 @@
+const { uploadLeaveDoc } = require("../../Config/Cloudinary");
 const User = require("../../Modal/User");
 const LeavePolicy = require("../../Modal/leavefolder/leavepolicy");
 const UserLeave = require("../../Modal/leavefolder/userleaves");
@@ -316,6 +317,22 @@ if (newTotal > policyEntry.days) {
 }
 
 
+let docUrl = null;
+if(req.file && req.file.buffer){
+  try{
+    const upload= await uploadLeaveDoc(req.file.buffer);
+    docUrl = upload.secure_url;
+    console.log(">>> Document uploaded successfully:", docUrl);
+  }
+  catch(error){
+     console.error(">>> Cloudinary upload failed:", error);
+        return res.status(500).json({
+          success: false,
+          message: "Failed to upload document",
+        });
+  }
+}
+
     const leaveEntry = {
       type: leaveTypeUpper,
       reason,
@@ -323,6 +340,7 @@ if (newTotal > policyEntry.days) {
       fromDate: start,
       toDate: end,
       status: "Pending",
+      doc: docUrl || null, 
     };
 
     if (!userLeave) {

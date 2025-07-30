@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const leaveRoutes = require("../Controler/Leave_Controller/LeaveController");
 const isAuthenticated = require("../middleware/isAuthMiddleware");
+const wrappedDocUpload = require("../middleware/UserPDFImage");
 
 // leave balance keliye hai user hai
 router.get("/balanceleave",isAuthenticated,leaveRoutes.getUserLeaveBalance);
@@ -25,10 +26,7 @@ router.post("/leave",isAuthenticated, leaveRoutes.HandleAddLeavePolicy);
 router.put("/updateleave", isAuthenticated, leaveRoutes.updateLeavePolicy);
 
 // User leave
-router.post("/user-leave",isAuthenticated, leaveRoutes.createOrUpdateUserLeave);
-
-
-
+router.post("/user-leave",isAuthenticated,wrappedDocUpload, leaveRoutes.createOrUpdateUserLeave);
 
 
 // Then dynamic routes

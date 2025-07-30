@@ -40,6 +40,10 @@ const UserLeaveSchema = new mongoose.Schema({
         type: Date,
         required: true,
       },
+      doc:{
+        type:String,
+        default: null,
+      },
       status: {
         type: String,
         enum: ["Pending", "Approved", "Rejected"],
